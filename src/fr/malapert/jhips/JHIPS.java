@@ -210,6 +210,9 @@ public class JHIPS {
         if(x>=img.getWidth()) {
             x = x - img.getWidth();
         }
+        //Flip X coordinate
+        x = (int) Math.abs(x-(img.getWidth()-1));
+        
         int y = (int) (pt.theta * img.getHeight() / Math.PI);
         return new int[]{x, y};
     }
