@@ -18,9 +18,12 @@
  ******************************************************************************/
 package fr.malapert.jhips;
 
+import fr.malapert.jhips.exception.JHIPSException;
+import fr.malapert.jhips.exception.JHIPSOutputImageException;
 import healpix.essentials.Pointing;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.net.MalformedURLException;
 import java.net.URL;
 
 /**
@@ -32,17 +35,20 @@ import java.net.URL;
 public class MarsHips extends JHIPS {
     
     // Default camera FOV along X and Y camera's axis
-    private static final double FOV_CAMERA = 15 * Math.PI / 180;  
+    private static final double FOV_CAMERA_ALONG_AZIMUTH = 15 * Math.PI / 180; 
+    private static final double FOV_CAMERA_ALONG_ELEVATION = 15 * Math.PI / 180; 
     
     // Default camera position in the azimuthal frame in radians
     private static final double[] DEFAULT_CAMERA_AZ = new double[] {0,0};        
     
-    public double[] cameraCoordInAz = DEFAULT_CAMERA_AZ;
-    
+    // The camera's center in the azimuthal frame in radians
+    private double[] cameraCoordInAz = DEFAULT_CAMERA_AZ;
+     
     public MarsHips() {
-        super();
+        super(12, FOV_CAMERA_ALONG_AZIMUTH, FOV_CAMERA_ALONG_ELEVATION);
+        // remove 12 to get the full resolution but need space on disk and memory
     }
-    
+        
     /**
      * Returns the center of the camera in azimuthal frame.
      * @return the cameraCoordInAz (azimuth, elevation) in radians
@@ -60,13 +66,7 @@ public class MarsHips extends JHIPS {
     }    
     
     @Override
-    protected int computeNside(double fovAlongHeight, final BufferedImage image) {
-        double pixSize = Math.toDegrees(FOV_CAMERA) * 60 * 60 / image.getWidth();
-        return calculateNSide(pixSize);
-    }
-    
-    @Override
-    protected int[] getPixelValueFromSphericalCoordinates(Pointing pt, BufferedImage img) throws Exception {
+    protected int[] getPixelValueFromSphericalCoordinates(Pointing pt, BufferedImage img) throws JHIPSOutputImageException {
         // converts spherical coordinate to azimutal coordinates
         double azimuth = pt.phi;
         double elevation = Math.PI * 0.5 - pt.theta;
@@ -83,30 +83,27 @@ public class MarsHips extends JHIPS {
         double[] variationAzCoord = new double[] {variationAzimuth, variationElev}; 
         
         // Find the scale per pixel 
-        double[] scale = new double[] {FOV_CAMERA/img.getWidth(), FOV_CAMERA/img.getHeight()};
+        double[] scale = new double[] {FOV_CAMERA_ALONG_AZIMUTH/img.getWidth(), FOV_CAMERA_ALONG_ELEVATION/img.getHeight()};
         
         // Find the number of pixel to move from the camera's center
         double[] pixelToMoveAlongXY = new double[]{variationAzCoord[0] / scale[0], variationAzCoord[1] / scale[1]};
                 
         
-        int x = (int) (pixelToMoveAlongXY[0] + centerCameraPixels[0]);
-        int y = (int) (pixelToMoveAlongXY[1] + centerCameraPixels[1]);
+        int x = (int) (-pixelToMoveAlongXY[0] + centerCameraPixels[0]);
+        int y = (int) (-pixelToMoveAlongXY[1] + centerCameraPixels[1]);
         
         // The pixel to extract is outside the camera
         if(x>=img.getWidth() || y>= img.getHeight() || x<0 || y<0) {
-           throw new Exception();
+           throw new JHIPSOutputImageException();
         }
         return new int[]{x, y};
     }    
     
-    public static void main(String[] args) throws Exception {
-        System.out.println("processing file:///home/malapert/Documents/MARS/JHIPS/jhips_in/0899MR0039410010501279C00_DRCL.png");
+    public static void main(String[] args) throws MalformedURLException, JHIPSException {
         MarsHips hProj = new MarsHips();
         hProj.setOutputDirectory(new File("/tmp/hpx"));
-        hProj.process(new URL("file:///home/malapert/Documents/MARS/JHIPS/jhips_in/0899MR0039410010501279C00_DRCL.png"));
-        
-    }    
-
-    
+        hProj.addFile(new URL("file:///home/malapert/Documents/MARS/JHIPS/jhips_in/0899MR0039410010501279C00_DRCL.png"));
+        hProj.process();       
+    }        
     
 }

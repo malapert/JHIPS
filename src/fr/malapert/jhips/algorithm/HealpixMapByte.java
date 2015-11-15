@@ -16,8 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package fr.malapert.jhips;
+package fr.malapert.jhips.algorithm;
 
+import fr.malapert.jhips.JHIPS;
 import healpix.essentials.*;
 import java.util.Arrays;
 
@@ -34,13 +35,13 @@ public class HealpixMapByte extends HealpixBase {
 
     public HealpixMapByte(long nside_in, Scheme scheme_in) throws Exception {
         super(nside_in, scheme_in);
-        HealpixUtils.check(nside <= (1 << 13), "resolution too high");
+        HealpixUtils.check(nside <= (1 << JHIPS.ORDER), "resolution too high");
         data = new byte[(int) getNpix()];
     }
 
     public HealpixMapByte(byte[] data_in, Scheme scheme_in) throws Exception {
         super(npix2Nside(data_in.length), scheme_in);
-        HealpixUtils.check(nside <= (1 << 13), "resolution too high");
+        HealpixUtils.check(nside <= (1 << JHIPS.ORDER), "resolution too high");
         data = data_in;
     }
 
@@ -54,7 +55,7 @@ public class HealpixMapByte extends HealpixBase {
     public void setNside(long nside_in) throws Exception {
         if (nside_in != nside) {
             super.setNside(nside_in);
-            HealpixUtils.check(nside <= (1 << 13), "resolution too high");
+            HealpixUtils.check(nside <= (1 << JHIPS.ORDER), "resolution too high");
             data = new byte[(int) getNpix()];
         }
     }
@@ -70,7 +71,7 @@ public class HealpixMapByte extends HealpixBase {
     public void setNsideAndScheme(long nside_in, Scheme scheme_in)
             throws Exception {
         super.setNsideAndScheme(nside_in, scheme_in);
-        HealpixUtils.check(nside <= (1 << 13), "resolution too high");
+        HealpixUtils.check(nside <= (1 << JHIPS.ORDER), "resolution too high");
         data = new byte[(int) getNpix()];
     }
 
@@ -102,7 +103,7 @@ public class HealpixMapByte extends HealpixBase {
      * @throws java.lang.Exception
      */
     public void swapScheme() throws Exception {
-        HealpixUtils.check((order >= 0) && (order <= 13),
+        HealpixUtils.check((order >= 0) && (order <= JHIPS.ORDER),
                 "swapping not supported for this Nside");
         for (int m = 0; m < swap_cycle[order].length; ++m) {
             int istart = swap_cycle[order][m];

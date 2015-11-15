@@ -15,10 +15,15 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * JHIPS. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************
+ * ****************************************************************************
  */
 package fr.malapert.jhips;
 
+import fr.malapert.jhips.algorithm.HIPSGeneration;
+import fr.malapert.jhips.algorithm.HealpixMapByte;
+import fr.malapert.jhips.util.FITSUtil;
+import fr.malapert.jhips.exception.JHIPSException;
+import fr.malapert.jhips.exception.JHIPSOutputImageException;
 import healpix.essentials.HealpixBase;
 import healpix.essentials.HealpixUtils;
 import healpix.essentials.Pointing;
@@ -30,6 +35,8 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 
 /**
@@ -39,11 +46,43 @@ import javax.imageio.ImageIO;
  */
 public class JHIPS {
 
-    private static final int DEFAULT_ORDER = 10;
-    public static final int order_max = 29;
-
+    /**
+     * Transforms one degree in arcseconds.
+     */
+    public static final double DEG2ARCSEC = 3600;
+    /**
+     * Max Healpix order.
+     */
+    public static final int ORDER_MAX = 29;
+    /**
+     * Selecting Healpix order and initialized to ORDER_MAX
+     */
+    public static int ORDER = ORDER_MAX;
+    
+    /**
+     * delta RA = 360°
+     */
+    private static final double FOV_MAP_ALONG_WIDTH = 360;
+    /**
+     * delta DEC = 180°
+     */
+    private static final double FOV_MAP_ALONG_HEIGHT = 180;
+    /**
+     * Output directory to store the result
+     */
     private File outputDirectory = new File("/tmp/data");
-    private long nside;
+    /**
+     * FOV along the pixel width
+     */
+    private double fovAlongWidth;
+    /**
+     * FOV along the pixel height
+     */
+    private double fovAlongHeight;
+
+    // List of files to process
+    public final List<URL> files = new ArrayList<>();
+
     private static final HIPSGeneration hips = new HIPSGeneration();
 
     /**
@@ -60,37 +99,41 @@ public class JHIPS {
     }
 
     /**
-     * Create the instance
+     * Creates a JHIPS instance with a FOV = 360°x180°
      */
     public JHIPS() {
-        this.nside = (long) Math.pow(2, DEFAULT_ORDER);
+        this(FOV_MAP_ALONG_WIDTH, FOV_MAP_ALONG_HEIGHT);
     }
 
     /**
-     * Set the order.
+     * Creates a JHIPS instance with a FOV of fovAlongWidth x fovAlongHeight
      *
-     * @param order Healpix order
+     * @param fovAlongWidth FOV along image's with in degree
+     * @param fovAlongHeight FOV along image's height in degree
      */
-    public void setOrder(int order) {
-        this.nside = (long) Math.pow(2, order);
+    public JHIPS(double fovAlongWidth, double fovAlongHeight) {
+        this(JHIPS.ORDER, fovAlongWidth, fovAlongHeight);
     }
-
+    
     /**
-     * Gets the order
+     * Creates a JHIPS instance with a FOV of fovAlongWidth x fovAlongHeight at a specific order
      *
-     * @return the Healpix order
-     * @throws Exception
+     * @param order Mesh's resolution of the Healpix index
+     * @param fovAlongWidth FOV along image's with in degree
+     * @param fovAlongHeight FOV along image's height in degree
      */
-    public int getOrder() throws Exception {
-        return HealpixBase.nside2order(this.nside);
-    }
+    public JHIPS(int order, double fovAlongWidth, double fovAlongHeight) {
+        JHIPS.ORDER = order;
+        setFovAlongWidth(fovAlongWidth);
+        setFovAlongHeight(fovAlongHeight);
+    }    
 
     /**
      * Returns the output directory
      *
      * @return the outputDirectory
      */
-    protected File getOutputDirectory() {
+    public File getOutputDirectory() {
         return outputDirectory;
     }
 
@@ -99,22 +142,109 @@ public class JHIPS {
      *
      * @param outputDirectory the outputDirectory to set
      */
-    protected void setOutputDirectory(final File outputDirectory) {
+    public void setOutputDirectory(final File outputDirectory) {
         this.outputDirectory = outputDirectory;
     }
 
     /**
-     * Process the Healpix projection.
+     * Returns the FOV in degree along image's width.
      *
-     * @param inputFile The file to ocess
-     * @throws Exception
+     * @return the fovAlongWidth in degree
      */
-    public void process(final URL inputFile) throws Exception {
-        BufferedImage img = readJpgImage(inputFile);
-        int computedNside = computeNside(180 ,img);
-        HealpixBase hpx = initHealpixMap(computedNside);
-        List<String> filesHMapToProcess = createHealpixVector(hpx, img);
-        generateHips(filesHMapToProcess);
+    public double getFovAlongWidth() {
+        return fovAlongWidth;
+    }
+
+    /**
+     * Sets the FOV in degree along image's width.
+     *
+     * @param fovAlongWidth the fovAlongWidth to set
+     */
+    public final void setFovAlongWidth(double fovAlongWidth) {
+        this.fovAlongWidth = fovAlongWidth;
+    }
+
+    /**
+     * Returns the FOV in degree along image's height.
+     *
+     * @return the fovAlongHeight in degree
+     */
+    public double getFovAlongHeight() {
+        return fovAlongHeight;
+    }
+
+    /**
+     * Sets the FOV in degree along image's height.
+     *
+     * @param fovAlongHeight the fovAlongHeight to set
+     */
+    public final void setFovAlongHeight(double fovAlongHeight) {
+        this.fovAlongHeight = fovAlongHeight;
+    }
+
+    /**
+     * Returns the list of files to process in order to merge all files in the
+     * same sky
+     *
+     * @return the files
+     */
+    public List<URL> getFiles() {
+        return files;
+    }
+
+    /**
+     * Add files to process in order to merge them in the same sky
+     *
+     * @param files the files to set
+     */
+    public void addFiles(final List<URL> files) {
+        this.files.addAll(files);
+    }
+
+    /**
+     * Add file to process in order to merge it with other files in the same sky
+     *
+     * @param file the file to set
+     */
+    public void addFile(final URL file) {
+        this.files.add(file);
+    }
+
+    /**
+     * Projects all files on the sphere.
+     *
+     * @throws JHIPSException
+     */
+    public void process() throws JHIPSException {
+        try {
+            Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "{0} files are being processed ... ", getFiles().size());
+            BufferedImage img = readImage(getFiles().get(0));
+
+            Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Use {0} to compute nside ... ", getFiles().get(0));
+            int computedNside = computeNside(getFovAlongWidth(), getFovAlongHeight(), img);
+
+            Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "The Healpix index is being processed ... ");
+            HealpixBase hpx = initHealpixMap(computedNside);
+
+            Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Creating Healpix vector ... ");
+            List<String> filesHMapToProcess = createHealpixVector(getFiles(), hpx);
+
+            Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Creating HIPS ... ");
+            generateHips(filesHMapToProcess);
+        } catch (Exception ex) {
+            throw new JHIPSException(ex);
+        }
+    }
+
+    /**
+     * Projects a file on the sphere.
+     *
+     * @param inputFile The file to process
+     * @throws JHIPSException
+     */
+    public void process(final URL inputFile) throws JHIPSException {
+        addFile(inputFile);
+        process();
     }
 
     /**
@@ -122,25 +252,29 @@ public class JHIPS {
      *
      * @param file
      * @return a buffered image
+     * @throws java.io.IOException
      */
-    protected BufferedImage readJpgImage(final URL file) {
-        BufferedImage img = null;
-        try {
-            img = ImageIO.read(file);
-        } catch (IOException e) {
-        }
-        return img;
+    protected BufferedImage readImage(final URL file) throws IOException {
+        return ImageIO.read(file);
     }
 
     /**
-     * Computes nside
+     * Computes nside bases on a rectangular pixel.
      *
+     * <p>
+     * The nside is computed as the diagonal of the pixel.
+     * </p>
+     *
+     * @param fovAlongWidth FOV along the width
      * @param fovAlongHeight FOV along the height
      * @param image image corresponding to the FOV
      * @return nside
      */
-    protected int computeNside(double fovAlongHeight, final BufferedImage image) {
-        double pixSize = fovAlongHeight * 60 * 60 / image.getHeight();
+    protected int computeNside(double fovAlongWidth, double fovAlongHeight, final BufferedImage image) {
+        double pixSizeHeight = fovAlongHeight * DEG2ARCSEC / image.getHeight();
+        double pixSizeWidth = fovAlongWidth * DEG2ARCSEC / image.getWidth();
+        double pixSize = Math.sqrt(pixSizeHeight * pixSizeHeight + pixSizeWidth * pixSizeWidth);
+        Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Computing pixel size ...  {0} arsec ", pixSize);
         return calculateNSide(pixSize);
     }
 
@@ -156,18 +290,48 @@ public class JHIPS {
     }
 
     /**
-     * Fill the Healpix vector for each RGB of the buffered image
+     * Fill the Healpix vector for each RGB of all files.
      *
+     * @param files List of files to project on the sphere
      * @param hpx Healpix index
-     * @param img JPEG buffer
      * @return The RGB HIPS of the buffered image
      * @throws Exception
      */
-    protected List<String> createHealpixVector(HealpixBase hpx, BufferedImage img) throws Exception {
+    protected List<String> createHealpixVector(final List<URL> files, final HealpixBase hpx) throws Exception {
         List<String> filesHMapToProcess = new ArrayList();
         HealpixMapByte hpxByteR = new HealpixMapByte(hpx.getNside(), Scheme.NESTED);
         HealpixMapByte hpxByteG = new HealpixMapByte(hpx.getNside(), Scheme.NESTED);
         HealpixMapByte hpxByteB = new HealpixMapByte(hpx.getNside(), Scheme.NESTED);
+        // TODO : Maybe invert the process - Loop on pixels then on files
+        for (URL file : files) {            
+            try {
+                BufferedImage img = readImage(file);
+                fillHealpixVectorForOneFile(hpx, img, hpxByteR, hpxByteG, hpxByteB);
+                Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Processing file {0} ...  OK", file.getFile());
+            } catch (Exception ex) {
+                Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Processing file {0} ... Error", file.getFile());
+            }
+        }
+        filesHMapToProcess.add(getOutputDirectory().getAbsolutePath() + "/r.fits");
+        filesHMapToProcess.add(getOutputDirectory().getAbsolutePath() + "/g.fits");
+        filesHMapToProcess.add(getOutputDirectory().getAbsolutePath() + "/b.fits");
+        FITSUtil.writeByteMap(hpxByteR, filesHMapToProcess.get(0));
+        FITSUtil.writeByteMap(hpxByteG, filesHMapToProcess.get(1));
+        FITSUtil.writeByteMap(hpxByteB, filesHMapToProcess.get(2));
+        return filesHMapToProcess;
+    }
+
+    /**
+     * Fills the Healpix vector for one file.
+     *
+     * @param hpx Healpix index
+     * @param img Image to project on the sphere
+     * @param hpxByteR Healpix vector in R color
+     * @param hpxByteG Healpix vector in G color
+     * @param hpxByteB Healpix vector in B color
+     * @throws Exception Healpix exception
+     */
+    private void fillHealpixVectorForOneFile(final HealpixBase hpx, final BufferedImage img, final HealpixMapByte hpxByteR, final HealpixMapByte hpxByteG, final HealpixMapByte hpxByteB) throws Exception {
         long nPix = hpx.getNpix();
         for (long pixel = 0; pixel < nPix; pixel++) {
             Pointing pt = hpx.pix2ang(pixel);
@@ -178,17 +342,10 @@ public class JHIPS {
                 hpxByteR.setPixel(pixel, (byte) c.getRed());
                 hpxByteG.setPixel(pixel, (byte) c.getGreen());
                 hpxByteB.setPixel(pixel, (byte) c.getBlue());
-            } catch (Exception ex) {
-
+            } catch (JHIPSOutputImageException ex) {
+                Logger.getLogger(JHIPS.class.getName()).log(Level.FINEST, "The coordinates (phi,theta)=({0},{1}) not in the file", new Object[]{pt.phi, pt.theta});
             }
         }
-        filesHMapToProcess.add(getOutputDirectory().getAbsolutePath() + "/r.fits");
-        filesHMapToProcess.add(getOutputDirectory().getAbsolutePath() + "/g.fits");
-        filesHMapToProcess.add(getOutputDirectory().getAbsolutePath() + "/b.fits");
-        FITSUtil.writeByteMap(hpxByteR, filesHMapToProcess.get(0));
-        FITSUtil.writeByteMap(hpxByteG, filesHMapToProcess.get(1));
-        FITSUtil.writeByteMap(hpxByteB, filesHMapToProcess.get(2));
-        return filesHMapToProcess;
     }
 
     /**
@@ -211,12 +368,9 @@ public class JHIPS {
     protected int calculateNSide(double pixsize) {
         double arcsec2rad = Math.PI / (180. * 60. * 60.);
         double nsd = Math.sqrt(4 * Math.PI / 12.) / (arcsec2rad * pixsize);
-        int order_req = Math.max(0, Math.min(order_max, 1 + HealpixUtils.ilog2((long) (nsd))));  
-        
-        // Hack to save the memory of my laptop
-        if (order_req >= 13)
-            order_req =12;
-        
+        int order_req = Math.max(0, Math.min(ORDER, 1 + HealpixUtils.ilog2((long) (nsd))));
+        Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Selecting order={0} / instead of {1}", new Object[]{order_req, 1 + HealpixUtils.ilog2((long) (nsd))});
+        //Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Space required ... {0} Mb", 512*Math.pow(2, order_req) / 1024 / 1024 * 3);
         return 1 << order_req;
     }
 
@@ -227,9 +381,9 @@ public class JHIPS {
      * @param pt Healpix location on the sphere
      * @param img buffer
      * @return the pixel coordinate according to the pointing
-     * @throws java.lang.Exception No pixel to extract
+     * @throws fr.malapert.jhips.exception.JHIPSOutputImageException No pixel to extract
      */
-    protected int[] getPixelValueFromSphericalCoordinates(Pointing pt, BufferedImage img) throws Exception {
+    protected int[] getPixelValueFromSphericalCoordinates(Pointing pt, BufferedImage img) throws JHIPSOutputImageException {
         int x = (int) ((pt.phi + Math.PI) * img.getWidth() / (2 * Math.PI));
         if (x >= img.getWidth()) {
             x = x - img.getWidth();
