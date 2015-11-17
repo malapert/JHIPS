@@ -50,6 +50,7 @@ public class HIPSGeneration extends HipsGen {
             if(!getPublisher().isEmpty()) {
                 args.add("publisher="+getPublisher());
             }
+            args.add("pixelCut=0 255");
             this.execute(args.toArray(new String[]{}));
         } catch (Exception ex) {
             Logger.getLogger(HIPSGeneration.class.getName()).log(Level.SEVERE, null, ex);
