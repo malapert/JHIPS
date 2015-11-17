@@ -158,7 +158,7 @@ public class HealpixMapByte extends HealpixBase {
      * @param val new value for the pixel
      */
     public void setPixel(long ipix, byte val) {
-        data[(int) ipix] = val;
+        data[(int)ipix] = val;
     }
 
     /**
