@@ -162,7 +162,7 @@ public class MetadataFile {
            result = new Color(image.getRGB(x, y));
            if (result.getRed() == 255 && result.getBlue() == 255 && result.getGreen() == 255) {
                result = null;
-           }
+           } 
         }
         return result;
     }

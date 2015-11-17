@@ -160,6 +160,6 @@ public class MetadataFileCollection {
                 match++;
             }
         }
-        return (match == 0)? null : new Color(red/match, green/match, blue/match);      
+        return (match == 0)? null : new Color(red/match, green/match, blue/match, alpha/match);      
     }                    
 }

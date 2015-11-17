@@ -39,10 +39,10 @@ public class MarsHips extends JHIPS {
     public static void main(String[] args) throws MalformedURLException, JHIPSException, IOException {
         MarsHips hProj = new MarsHips();
         hProj.setOutputDirectory(new File("/tmp/hpx"));
-        hProj.addFile(new URL("file:///home/malapert/Documents/MARS/PanoData/0900MR0039440010501309C00_DRCL.png"), Math.toRadians(179.85), Math.toRadians(-9.25), new double[]{Math.toRadians(7.04), Math.toRadians(7.04)});
-        hProj.addFile(new URL("file:///home/malapert/Documents/MARS/PanoData/0900MR0039440020501310C00_DRCL.png"), Math.toRadians(184.386), Math.toRadians(-9.3011), new double[]{Math.toRadians(7.04), Math.toRadians(7.04)});
-        hProj.addFile(new URL("file:///home/malapert/Documents/MARS/PanoData/0900MR0039440030501311C00_DRCL.png"), Math.toRadians(184.4857), Math.toRadians(-13.2926), new double[]{Math.toRadians(7.04), Math.toRadians(7.04)});
-        hProj.addFile(new URL("file:///home/malapert/Documents/MARS/PanoData/0900MR0039440040501312C00_DRCL.png"), Math.toRadians(179.9457), Math.toRadians(-13.2962), new double[]{Math.toRadians(7.04), Math.toRadians(7.04)});
+        hProj.addFile(new URL("file:///home/malapert/Documents/MARS/PanoData/0900MR0039440010501309C00_DRCL.png"), Math.toRadians(179.85), Math.toRadians(-9.25), new double[]{Math.toRadians(5.4), Math.toRadians(5.4)});
+        hProj.addFile(new URL("file:///home/malapert/Documents/MARS/PanoData/0900MR0039440020501310C00_DRCL.png"), Math.toRadians(184.386), Math.toRadians(-9.3011), new double[]{Math.toRadians(5.4), Math.toRadians(5.4)});
+        hProj.addFile(new URL("file:///home/malapert/Documents/MARS/PanoData/0900MR0039440030501311C00_DRCL.png"), Math.toRadians(184.4857), Math.toRadians(-13.2926), new double[]{Math.toRadians(5.4), Math.toRadians(5.4)});
+        hProj.addFile(new URL("file:///home/malapert/Documents/MARS/PanoData/0900MR0039440040501312C00_DRCL.png"), Math.toRadians(179.9457), Math.toRadians(-13.2962), new double[]{Math.toRadians(5.4), Math.toRadians(5.4)});
 
         hProj.process();
     }
