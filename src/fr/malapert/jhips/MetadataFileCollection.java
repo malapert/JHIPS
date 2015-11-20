@@ -123,17 +123,10 @@ public class MetadataFileCollection {
      * @return the highest scale
      */
     private double[] computeHighestResolution(double[] scale, final MetadataFile file ) {
-            double[] fov = file.getCameraFov();
-            int imageWidth = file.getWidth();
-            int imageHeight = file.getHeight();
-            double scaleX = fov[0]/imageWidth;
-            double scaleY = fov[1]/imageHeight;
-            if (scaleX < scale[0]) {
-                scale[0] = scaleX;
-            }
-            if (scaleY < scale[1]) {
-                scale[1] = scaleY;
-            }
+            double scaleX = file.getScale()[0];
+            double scaleY = file.getScale()[1];
+            scale[0] = (scaleX < scale[0]) ? scaleX : scale[0];
+            scale[1] = (scaleY < scale[1]) ? scaleY : scale[1];
             return scale;
     }
     
@@ -158,6 +151,7 @@ public class MetadataFileCollection {
                 green += c.getGreen();
                 blue += c.getBlue();
                 match++;
+                //break;
             }
         }
         return (match == 0)? null : new Color(red/match, green/match, blue/match, alpha/match);      
