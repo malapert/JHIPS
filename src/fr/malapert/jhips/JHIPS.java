@@ -78,6 +78,7 @@ public class JHIPS {
     public static void main(String[] args) throws Exception {
         System.out.println("processing http://www.fvalk.com/images/MaptoGeo/world-view-total.jpg");
         JHIPS hProj = new JHIPS();
+        hProj.setOutputDirectory(new File("/tmp/data"));
         hProj.process(new URL("http://www.fvalk.com/images/MaptoGeo/world-view-total.jpg"),0,0,new double[]{Math.PI*2,Math.PI}, fr.malapert.jhips.algorithm.Projection.ProjectionType.CAR);
     }
 
@@ -165,6 +166,9 @@ public class JHIPS {
      */
     public void process() throws JHIPSException  {
         try {
+            // create directory
+            getOutputDirectory().mkdirs();
+            
             Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "{0} files are being processed ... ", getFiles().size());
 
             double scale = Math.toDegrees(getFiles().getScale())*DEG2ARCSEC;
@@ -228,7 +232,7 @@ public class JHIPS {
         HealpixMapByte hpxByteR = new HealpixMapByte(hpx.getNside(), Scheme.NESTED);
         HealpixMapByte hpxByteG = new HealpixMapByte(hpx.getNside(), Scheme.NESTED);
         HealpixMapByte hpxByteB = new HealpixMapByte(hpx.getNside(), Scheme.NESTED);   
-        fillHealpixVectorForOneFile(hpx, files, hpxByteR, hpxByteG, hpxByteB);
+        fillHealpixVector(hpx, files, hpxByteR, hpxByteG, hpxByteB);
         filesHMapToProcess.add(getOutputDirectory().getAbsolutePath() + "/r.fits");
         filesHMapToProcess.add(getOutputDirectory().getAbsolutePath() + "/g.fits");
         filesHMapToProcess.add(getOutputDirectory().getAbsolutePath() + "/b.fits");
@@ -248,18 +252,18 @@ public class JHIPS {
      * @param hpxByteB Healpix vector in B color
      * @throws Exception Healpix exception
      */
-    private void fillHealpixVectorForOneFile(final HealpixBase hpx, final MetadataFileCollection collection, final HealpixMapByte hpxByteR, final HealpixMapByte hpxByteG, final HealpixMapByte hpxByteB) throws Exception {
+    private void fillHealpixVector(final HealpixBase hpx, final MetadataFileCollection collection, final HealpixMapByte hpxByteR, final HealpixMapByte hpxByteG, final HealpixMapByte hpxByteB) throws Exception {
         final String anim= "|/-\\";
         long nPix = hpx.getNpix();
         for (long pixel = 0; pixel < nPix; pixel++) {
+        //long pixel = 139123756;//41555125;
             int percent = (int) (pixel * 100 / nPix);
             if (percent%10 == 0) {
                 System.out.print("\r"+ anim.charAt((int)pixel%anim.length())+" "+percent+"% done");
                 System.out.flush();
             }
            
-            Pointing pt = hpx.pix2ang(pixel);
-            Color c = collection.getRGB(pt.phi, 0.5 * Math.PI - pt.theta);
+            Color c = collection.getRGB(hpx, pixel);
             if (c != null) {
                 hpxByteR.setPixel(pixel, (byte) c.getRed());
                 hpxByteG.setPixel(pixel, (byte) c.getGreen());

@@ -112,9 +112,9 @@ public class MarsHips extends JHIPS {
     public static void main(String[] args) throws MalformedURLException, JHIPSException, IOException {
         MarsHips hProj = new MarsHips();
         hProj.setOutputDirectory(new File("/tmp/data"));
-//        hProj.processDirectory(new File("/home/malapert/Documents/MARS/PanoData/jcm"), hProj);
-//        hProj.processDirectory(new File("/home/malapert/Documents/MARS/PanoData"), hProj);
+        hProj.processDirectory(new File("/home/malapert/Documents/MARS/PanoData/jcm"), hProj);
         hProj.processDirectory(new File("/home/malapert/Documents/MARS/PanoData"), hProj);
+        hProj.processDirectory(new File("/home/malapert/Documents/MARS/PanoData/jcm/Test"), hProj);
         hProj.process();
     }
 

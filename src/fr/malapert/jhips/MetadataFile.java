@@ -19,6 +19,13 @@
  */
 package fr.malapert.jhips;
 
+import cds.moc.HealpixMoc;
+import cds.moc.MocCell;
+import fr.malapert.jhips.exception.ProjectionException;
+import healpix.essentials.HealpixBase;
+import healpix.essentials.Pointing;
+import healpix.essentials.RangeSet;
+import healpix.essentials.Scheme;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -70,6 +77,8 @@ public class MetadataFile {
      */
     private int[] imageRequest = new int[]{0, 0};
 
+    private HealpixMoc index;
+
     private fr.malapert.jhips.algorithm.Projection.ProjectionType type;
 
     /**
@@ -107,6 +116,26 @@ public class MetadataFile {
         this.cameraFov = cameraFov;
         this.type = type;
         this.scale = initPixelScale(image, cameraFov);
+        this.index = createIndex(longitude, latitude, cameraFov);
+    }
+
+    private HealpixMoc createIndex(double longitude, double latitude, double[] cameraFOV) {
+        HealpixMoc moc;
+        try {
+            moc = new HealpixMoc();
+            HealpixBase base = new HealpixBase(1024, Scheme.NESTED);
+            double radius = Math.sqrt(0.5*cameraFOV[0]*0.5*cameraFOV[0] + 0.5*cameraFOV[1]*0.5*cameraFOV[1]);
+            RangeSet range = base.queryDiscInclusive(new Pointing(0.5 * Math.PI - latitude, longitude), radius, 128);
+            RangeSet.ValueIterator iter = range.valueIterator();
+            while (iter.hasNext()) {
+                final long pixNest = iter.next();
+                moc.add(new MocCell(base.getOrder(), pixNest));
+            }
+        } catch (Exception ex) {
+            Logger.getLogger(MetadataFile.class.getName()).log(Level.SEVERE, null, ex);
+            moc = null;
+        }
+        return moc;
     }
 
     /**
@@ -115,7 +144,7 @@ public class MetadataFile {
      * @return the number of pixels to remove in X and Y axis
      */
     private int[] computePixelsToRemove() {
-        return new int[]{Math.abs(image.getWidth() - getImageRequest()[0]), Math.abs(image.getHeight()) - getImageRequest()[1]};
+        return new int[]{image.getWidth() - getImageRequest()[0], image.getHeight() - getImageRequest()[1]};
     }
 
     private double[] initPixelScale(BufferedImage image, double[] cameraFov) {
@@ -229,38 +258,56 @@ public class MetadataFile {
      */
     public Color getRGB(double longitude, double latitude) {
         Color result = null;
-        // Center of the camera in the reference pixel frame
-        double[] centerCameraPixels = new double[]{0.5 * getWidth() + 0.5, 0.5 * getHeight() + 0.5};
+        try {
 
-        // Center of the camera in the reference horizontal frame
-        double[] centerCameraHoriz = new double[]{getCameraLongitude(), getCameraLatitude()};
+            // Center of the camera in the reference pixel frame
+            double[] centerCameraPixels = new double[]{0.5 * getWidth() + 0.5, 0.5 * getHeight() + 0.5};
 
-        double[] xy = fr.malapert.jhips.algorithm.Projection.unProject(centerCameraPixels, centerCameraHoriz, scale, new double[]{0, 0}, longitude, latitude, type);
-        int x = (int) xy[0];
-        int y = (int) (getHeight() - xy[1]);
+            // Center of the camera in the reference horizontal frame
+            double[] centerCameraHoriz = new double[]{getCameraLongitude(), getCameraLatitude()};
 
-        // Pixel to remove on X and Y axis
-        int[] pixelsToRemove = computePixelsToRemove();
-        pixelsToRemove[0] = (pixelsToRemove[0]<0 || pixelsToRemove[0]>getWidth()) ? 0 : pixelsToRemove[0];
-        pixelsToRemove[1] = (pixelsToRemove[1]<0 || pixelsToRemove[1]>getHeight()) ? 0 : pixelsToRemove[1];
+            double[] xy = fr.malapert.jhips.algorithm.Projection.unProject(centerCameraPixels, centerCameraHoriz, scale, new double[]{0, 0}, longitude, latitude, type);
+            int x = (int) xy[0];
+            //int y = (int) -(getHeight()- xy[1]);
+            int y = (int) (getHeight() - xy[1]);
 
-        // The pixel to extract is outside the camera       
-        if (x >= (int) (getWidth() - 0.5 * pixelsToRemove[0]) || y >= (int) (getHeight() - 0.5 * pixelsToRemove[1]) || x < 0.5 * pixelsToRemove[0] || y < 0.5 * pixelsToRemove[1]) {
-            result = null;
-        } else {
-            try {
-                result = new Color(image.getRGB(x, y));
-                // TODO : A supprimer - les conditions dans le if précédent doivent résoudre ce problème
-                //if (result.getRed() == 255 && result.getBlue() == 255 && result.getGreen() == 255) {
-                //     Logger.getLogger(MetadataFile.class.getName()).log(Level.WARNING, "I am inside");
-                //    result = null;
-                //}
-            } catch (ArrayIndexOutOfBoundsException ex) {
-                Logger.getLogger(MetadataFile.class.getName()).log(Level.SEVERE, "Error when extracting values (x,y) = ({0},{1}) from file {2}", new Object[]{x,y,getFile().toString()});
-                Logger.getLogger(MetadataFile.class.getName()).log(Level.SEVERE, "(width, height) = ({0},{1}) , imgRequest=({2},{3})", new Object[]{getWidth(), getHeight(), getImageRequest()[0], getImageRequest()[1]});                
+            // Pixel to remove on X and Y axis
+            int[] pixelsToRemove = computePixelsToRemove();
+            pixelsToRemove[0] = (pixelsToRemove[0] <= 0 || pixelsToRemove[0] >= getWidth()) ? 0 : pixelsToRemove[0];
+            pixelsToRemove[1] = (pixelsToRemove[1] <= 0 || pixelsToRemove[1] >= getHeight()) ? 0 : pixelsToRemove[1];
+
+            // The pixel to extract is outside the camera
+            if (x >= (int) (getWidth() - 0.5 * pixelsToRemove[0]) || y >= (int) (getHeight() - 0.5 * pixelsToRemove[1]) || x < 0.5 * pixelsToRemove[0] || y < 0.5 * pixelsToRemove[1]) {
+                result = null;
+            } else {
+                try {
+                    result = new Color(image.getRGB(x, y));
+                } catch (ArrayIndexOutOfBoundsException ex) {
+                    Logger.getLogger(MetadataFile.class.getName()).log(Level.SEVERE, "Error when extracting values (x,y) = ({0},{1}) from file {2}", new Object[]{x, y, getFile().toString()});
+                    Logger.getLogger(MetadataFile.class.getName()).log(Level.SEVERE, "(width, height) = ({0},{1}) , imgRequest=({2},{3})", new Object[]{getWidth(), getHeight(), getImageRequest()[0], getImageRequest()[1]});
+                }
             }
+
+        } catch (ProjectionException ex) {
+            Logger.getLogger(MetadataFile.class.getName()).log(Level.FINEST, null, ex);
         }
         return result;
+    }
+
+    public Color getRGB(final HealpixBase hpx, long pixel) {
+        Color result;
+        try {
+            Pointing pt = hpx.pix2ang(pixel);
+            result = getRGB(pt.phi, 0.5 * Math.PI - pt.theta);
+        } catch (Exception ex) {
+            Logger.getLogger(MetadataFile.class.getName()).log(Level.SEVERE, null, ex);
+            result = null;
+        }
+        return result;
+    }
+
+    public boolean isInside(int order, long pixel) {
+        return this.index.isIntersecting(order, pixel);
     }
 
 }
