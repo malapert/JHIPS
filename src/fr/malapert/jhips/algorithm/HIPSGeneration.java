@@ -20,13 +20,14 @@ package fr.malapert.jhips.algorithm;
 
 import cds.allsky.Context;
 import cds.allsky.HipsGen;
+import fr.malapert.jhips.exception.TilesGenerationException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Geneates HIPS from a Healpix map file.
+ * Generates HIPS tiles from a Healpix map file.
  * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
 public class HIPSGeneration extends HipsGen {
@@ -34,10 +35,24 @@ public class HIPSGeneration extends HipsGen {
     private String label = "";
     private String publisher = "JC Malapert (jcmalapert@gmail.com)";    
 
+    /**
+     * Creates an instance.
+     */
     public HIPSGeneration() {
         super();
     }
 
+    /**
+     * Generates the files in tiles.
+     * <p>
+     * The processing is launched with the following parameter:
+     * <ul>
+     * <li>Label
+     * <li>Publisher
+     * <li>pixelCut=0 255
+     * </ul>
+     * @param in 
+     */
     public void process(String in) {
         this.context = new Context();
         try {
@@ -54,10 +69,12 @@ public class HIPSGeneration extends HipsGen {
             this.execute(args.toArray(new String[]{}));
         } catch (Exception ex) {
             Logger.getLogger(HIPSGeneration.class.getName()).log(Level.SEVERE, null, ex);
+            throw new TilesGenerationException(ex);
         }
     }
 
     /**
+     * Returns the label.
      * @return the label
      */
     private String getLabel() {
@@ -65,6 +82,7 @@ public class HIPSGeneration extends HipsGen {
     }
 
     /**
+     * Sets the label.
      * @param label the label to set
      */
     private void setLabel(String label) {
@@ -72,6 +90,7 @@ public class HIPSGeneration extends HipsGen {
     }
 
     /**
+     * Returns the publisher.
      * @return the publisher
      */
     private String getPublisher() {
@@ -79,6 +98,7 @@ public class HIPSGeneration extends HipsGen {
     }
 
     /**
+     * Sets the publisher.
      * @param publisher the publisher to set
      */
     private void setPublisher(String publisher) {

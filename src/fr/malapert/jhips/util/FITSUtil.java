@@ -61,10 +61,9 @@ public class FITSUtil {
                 "HEALPix ordering scheme");
 
         FileOutputStream fos = new FileOutputStream(filename);
-        BufferedDataOutputStream s = new BufferedDataOutputStream(fos);
-
-        f.write(s);
-        s.flush();
-        s.close();
+        try (BufferedDataOutputStream s = new BufferedDataOutputStream(fos)) {
+            f.write(s);
+            s.flush();
+        }
     }
 }

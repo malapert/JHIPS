@@ -1,23 +1,22 @@
-/**
- * *****************************************************************************
+ /*******************************************************************************
  * Copyright 2015 - Jean-Christophe Malapert (jcmalapert@gmail.com)
  *
  * This file is part of JHIPS.
  *
- * JHIPS is free software: you can redistribute it and/or modify it under the
- * terms of the GNU General Public License as published by the Free Software
- * Foundation, either version 3 of the License, or (at your option) any later
- * version.
+ * JHIPS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * JHIPS is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * JHIPS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * JHIPS. If not, see <http://www.gnu.org/licenses/>.
- * ****************************************************************************
- */
-package fr.malapert.jhips;
+ * You should have received a copy of the GNU General Public License
+ * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
+package fr.malapert.jhips.metadata;
 
 import healpix.essentials.HealpixBase;
 import java.awt.Color;
@@ -27,7 +26,7 @@ import java.util.List;
 /**
  * Stores all metadata of each file to project.
  *
- * @author Jean-Christophe Malapert
+ * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
 public class MetadataFileCollection {
 
@@ -144,8 +143,8 @@ public class MetadataFileCollection {
     }
 
     /**
-     * Returns the RGB color from a pixel based on a longitude and latitude in
-     * radian.
+     * Returns the RGB color from a pixel based on a longitude and latitude 
+     * expressed in radians.
      *
      * @param longitude longitude in radian
      * @param latitude latitude in radian
@@ -172,6 +171,12 @@ public class MetadataFileCollection {
         return (match == 0) ? null : new Color(red / match, green / match, blue / match, alpha / match);
     }
 
+    /**
+     * Returns the RGB color from a pixel.
+     * @param hpx index
+     * @param pixel pixel to extract
+     * @return the RGB color
+     */
     public Color getRGB(final HealpixBase hpx, long pixel) {
         int alpha = 0;
         int red = 0;

@@ -1,23 +1,22 @@
-/**
- * *****************************************************************************
+ /*******************************************************************************
  * Copyright 2015 - Jean-Christophe Malapert (jcmalapert@gmail.com)
  *
  * This file is part of JHIPS.
  *
- * JHIPS is free software: you can redistribute it and/or modify it under the
- * terms of the GNU General Public License as published by the Free Software
- * Foundation, either version 3 of the License, or (at your option) any later
- * version.
+ * JHIPS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * JHIPS is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * JHIPS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * JHIPS. If not, see <http://www.gnu.org/licenses/>.
- * ****************************************************************************
- */
-package fr.malapert.jhips;
+ * You should have received a copy of the GNU General Public License
+ * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
+package fr.malapert.jhips.metadata;
 
 import cds.moc.HealpixMoc;
 import cds.moc.MocCell;
@@ -41,7 +40,7 @@ import javax.imageio.ImageIO;
  * the file - (longitude,latitude) of the camera's center in radian - the
  * camera's FOV as following longitude x latitude in radian
  *
- * @author Jean-Christophe Malapert
+ * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
 public class MetadataFile {
 
@@ -55,41 +54,46 @@ public class MetadataFile {
      */
     private final BufferedImage image;
     /**
-     * Longitude of the camera's center in radian.
+     * Longitude of the camera's center in radians.
      */
     private final double cameraLongitude;
     /**
-     * Latitude of the camera's center in radian.
+     * Latitude of the camera's center in radians.
      */
     private final double cameraLatitude;
     /**
-     * Camera's FOV [along longitude, along latitude] in radian
+     * Camera's FOV [along longitude, along latitude] in radians.
      */
     private final double[] cameraFov;
 
     /**
-     * Pixel's scale in rad/pixel
+     * Pixel's scale in rad/pixel.
      */
     private double[] scale;
 
     /**
-     * The real size of the image in pixels (without white borders)
+     * The real size of the image in pixels.
      */
-    private int[] imageRequest = new int[]{0, 0};
+    private int[] imageRequest;
 
+    /**
+     * The spatial index of the file.
+     */
     private HealpixMoc index;
 
+    /**
+     * The projection code associated to the acquisition.
+     */
     private fr.malapert.jhips.algorithm.Projection.ProjectionType type;
 
     /**
-     * creates an instance to store the file's metadata
-     *
-     * By default, the projection for an image is TAN.
+     * creates an instance to store the file's metadata. By default, 
+     * the projection for an image is TAN.
      *
      * @param file file to store
-     * @param longitude camera's center along longitude in radian
-     * @param latitude camera's center along latitude in radian
-     * @param cameraFov camera's fov along longitude and latitude in radian
+     * @param longitude camera's center along longitude in radians
+     * @param latitude camera's center along latitude in radians
+     * @param cameraFov camera's fov along longitude and latitude in radians
      * @throws IOException When an error happens by reading the file
      */
     public MetadataFile(final URL file, double longitude, double latitude, double[] cameraFov) throws IOException {
@@ -97,9 +101,9 @@ public class MetadataFile {
     }
 
     /**
-     * creates an instance to store the file's metadata
-     *
-     * By default, the projection for an image is TAN.
+     * Creates an instance to store the file's metadata. By default, the 
+     * projection for an image is TAN and the light reaching the camera takes all
+     * the camera's detector.
      *
      * @param file file to store
      * @param longitude camera's center along longitude in radian
@@ -111,14 +115,22 @@ public class MetadataFile {
     public MetadataFile(final URL file, double longitude, double latitude, double[] cameraFov, fr.malapert.jhips.algorithm.Projection.ProjectionType type) throws IOException {
         this.file = file;
         this.image = ImageIO.read(file);
+        this.imageRequest = new int[]{this.image.getWidth(), this.image.getHeight()};
         this.cameraLongitude = longitude;
         this.cameraLatitude = latitude;
         this.cameraFov = cameraFov;
         this.type = type;
-        this.scale = initPixelScale(image, cameraFov);
+        this.scale = initPixelScale(this.imageRequest, cameraFov);
         this.index = createIndex(longitude, latitude, cameraFov);
     }
 
+    /**
+     * Computes a spatial index of the image in order to boost the processing.
+     * @param longitude the azimuth in radians of the center of the image
+     * @param latitude the elevation in radians of the center of the image.
+     * @param cameraFOV the FOV in radians of the camera along azimuth and elevation
+     * @return the spatial index
+     */
     private HealpixMoc createIndex(double longitude, double latitude, double[] cameraFOV) {
         HealpixMoc moc;
         try {
@@ -139,21 +151,24 @@ public class MetadataFile {
     }
 
     /**
-     * Pixel to remove on X and Y
-     *
-     * @return the number of pixels to remove in X and Y axis
+     * Initializes the pixel scale in rad/pixel.
+     * @param imageRequest the real image size
+     * @param cameraFov the camera's field of view
+     * @return the pixel scale
      */
-    private int[] computePixelsToRemove() {
-        return new int[]{image.getWidth() - getImageRequest()[0], image.getHeight() - getImageRequest()[1]};
+    private double[] initPixelScale(int[] imageRequest, double[] cameraFov) {
+        return computeScale(imageRequest, cameraFov);
     }
 
-    private double[] initPixelScale(BufferedImage image, double[] cameraFov) {
-        return computeScale(image, cameraFov, new int[]{0, 0});
-    }
-
-    private double[] computeScale(BufferedImage image, double[] cameraFov, int[] pixelsToRemove) {
-        double scaleX = cameraFov[0] / (image.getWidth() - pixelsToRemove[0]);
-        double scaleY = cameraFov[1] / (image.getHeight() - pixelsToRemove[1]);
+    /**
+     * Computes the scales in rad/pixels.
+     * @param imageRequest the real image size
+     * @param cameraFov the camera's field of view in radians
+     * @return the scale in radians along X and Y axis
+     */
+    private double[] computeScale(int[] imageRequest, double[] cameraFov) {
+        double scaleX = cameraFov[0] / (imageRequest[0]);
+        double scaleY = cameraFov[1] / (imageRequest[1]);
         return new double[]{scaleX, scaleY};
     }
 
@@ -164,8 +179,7 @@ public class MetadataFile {
      */
     public void setImageRequest(int[] imageRequest) {
         this.imageRequest = imageRequest;
-        int[] pixelToRemove = computePixelsToRemove();
-        scale = computeScale(image, cameraFov, pixelToRemove);
+        scale = computeScale(imageRequest, cameraFov);
     }
 
     /**
@@ -178,9 +192,9 @@ public class MetadataFile {
     }
 
     /**
-     * Returns the scale in radian / pixel.
+     * Returns the scale in radians / pixel.
      *
-     * @return the scale in radian / pixel
+     * @return the scale in radians / pixel
      */
     public double[] getScale() {
         return this.scale;
@@ -196,25 +210,25 @@ public class MetadataFile {
     }
 
     /**
-     * Returns the camera's center longitude in radian.
+     * Returns the camera's center longitude in radians.
      *
-     * @return the cameraLongitude in radian
+     * @return the cameraLongitude in radians
      */
     public double getCameraLongitude() {
         return cameraLongitude;
     }
 
     /**
-     * Returns the camera's center latitude in radian.
+     * Returns the camera's center latitude in radians.
      *
-     * @return the cameraLatitude
+     * @return the cameraLatitude in radians
      */
     public double getCameraLatitude() {
         return cameraLatitude;
     }
 
     /**
-     * Returns the camera's FOV in radian.
+     * Returns the camera's FOV in radians.
      *
      * @return the cameraFov
      */
@@ -228,7 +242,7 @@ public class MetadataFile {
      * @return the image's width
      */
     public int getWidth() {
-        return image.getWidth();
+        return this.imageRequest[0];
     }
 
     /**
@@ -237,7 +251,7 @@ public class MetadataFile {
      * @return the image's height
      */
     public int getHeight() {
-        return image.getHeight();
+        return this.imageRequest[1];
     }
 
     /**
@@ -271,13 +285,8 @@ public class MetadataFile {
             //int y = (int) -(getHeight()- xy[1]);
             int y = (int) (getHeight() - xy[1]);
 
-            // Pixel to remove on X and Y axis
-            int[] pixelsToRemove = computePixelsToRemove();
-            pixelsToRemove[0] = (pixelsToRemove[0] <= 0 || pixelsToRemove[0] >= getWidth()) ? 0 : pixelsToRemove[0];
-            pixelsToRemove[1] = (pixelsToRemove[1] <= 0 || pixelsToRemove[1] >= getHeight()) ? 0 : pixelsToRemove[1];
-
             // The pixel to extract is outside the camera
-            if (x >= (int) (getWidth() - 0.5 * pixelsToRemove[0]) || y >= (int) (getHeight() - 0.5 * pixelsToRemove[1]) || x < 0.5 * pixelsToRemove[0] || y < 0.5 * pixelsToRemove[1]) {
+            if (x >= getWidth() || y >= getHeight() || x < 0 || y < 0) {
                 result = null;
             } else {
                 try {
@@ -294,6 +303,12 @@ public class MetadataFile {
         return result;
     }
 
+    /**
+     * Returns the RGB color from a pixel based on a Healpix pixel.
+     * @param hpx index
+     * @param pixel pixel to get
+     * @return the RGB color
+     */
     public Color getRGB(final HealpixBase hpx, long pixel) {
         Color result;
         try {
@@ -306,8 +321,13 @@ public class MetadataFile {
         return result;
     }
 
+    /**
+     * Checks whether a pixel is inside the index.
+     * @param order mesh resolution
+     * @param pixel pixel to test
+     * @return True when the pixel in inside the index otherwise False
+     */
     public boolean isInside(int order, long pixel) {
         return this.index.isIntersecting(order, pixel);
     }
-
 }

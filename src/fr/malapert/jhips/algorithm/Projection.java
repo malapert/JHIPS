@@ -1,26 +1,51 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+ /*******************************************************************************
+ * Copyright 2015 - Jean-Christophe Malapert (jcmalapert@gmail.com)
+ *
+ * This file is part of JHIPS.
+ *
+ * JHIPS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JHIPS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
+ ******************************************************************************/
 package fr.malapert.jhips.algorithm;
 
 import fr.malapert.jhips.exception.ProjectionException;
 import healpix.essentials.Pointing;
 import healpix.essentials.Vec3;
-import javax.xml.bind.PropertyException;
 
 /**
- *
- * @author Jean-Christophe Malapert
+ * Class utility for projection handling.
+ * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
 public class Projection {
 
+    /**
+     * The supported projection.
+     */
     public enum ProjectionType {
-
         CAR, TAN
     };
 
+    /**
+     * Converts horizontal coordinates in TAN projection to pixel coordinates.
+     * @param centerCameraPixels center position of the cameral in pixel coordinates
+     * @param cameraHori camera position in horizontal coordinates
+     * @param scale scale along both azimuth and elevation
+     * @param rotation rotation along both azimuth and elevation
+     * @param azimuth azimuth to convert in pixels along X axis (camera frame)
+     * @param elevation elevation to convert in pixels along Y axis (camera frame)
+     * @return the pixel (X,Y) in the camera frame corresponding to (azimuth, elevation)
+     * @throws ProjectionException 
+     */
     private static double[] unProjectTan(double[] centerCameraPixels, double[] cameraHori, double[] scale, double[] rotation, double azimuth, double elevation) throws ProjectionException {
         Pointing pt = new Pointing(0.5*Math.PI - elevation, azimuth);
         Pointing ptCenter = new Pointing(0.5*Math.PI - cameraHori[1], cameraHori[0]);
@@ -50,9 +75,19 @@ public class Projection {
         double y = centerCameraPixels[1] + (cd11 * dEl - cd21 * dAz) / det;
 
         return new double[]{x, y};
-
     }
 
+    /**
+     * Converts horizontal coordinates in CAR projection to pixel coordinates.
+     * @param centerCameraPixels center position of the cameral in pixel coordinates
+     * @param cameraHori camera position in horizontal coordinates
+     * @param scale scale along both azimuth and elevation
+     * @param rotation rotation along both azimuth and elevation
+     * @param azimuth azimuth to convert in pixels along X axis (camera frame)
+     * @param elevation elevation to convert in pixels along Y axis (camera frame)
+     * @return the pixel (X,Y) in the camera frame corresponding to (azimuth, elevation)
+     * @throws ProjectionException 
+     */
     private static double[] unProjectCAR(double[] centerCameraPixels, double[] cameraHori, double[] scale, double[] rotation, double azimuth, double elevation) {
         // Find the angular distance between the pt and camera's center projected on each axis (azimuth, elevation)
         double variationLongitude = azimuth - cameraHori[0];
@@ -71,6 +106,18 @@ public class Projection {
         return new double[]{x, y};
     }
 
+    /**
+     * Converts horizontal coordinates to pixel coordinates.
+     * @param cameraPixel center position of the cameral in pixel coordinates
+     * @param cameraHori camera position in horizontal coordinates
+     * @param scale scale along both azimuth and elevation
+     * @param rotation rotation along both azimuth and elevation
+     * @param azimuth azimuth to convert in pixels along X axis (camera frame)
+     * @param elevation elevation to convert in pixels along Y axis (camera frame)
+     * @param type projection type
+     * @return the pixel (X,Y) in the camera frame corresponding to (azimuth, elevation)
+     * @throws ProjectionException 
+     */
     public static double[] unProject(double[] cameraPixel, double[] cameraHori, double[] scale, double[] rotation, double azimuth, double elevation, ProjectionType type) throws ProjectionException {
         double[] xy;
         switch (type) {

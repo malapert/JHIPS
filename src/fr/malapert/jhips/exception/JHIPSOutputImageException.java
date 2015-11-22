@@ -20,7 +20,7 @@ package fr.malapert.jhips.exception;
 
 /**
  * Exception when the pixel that has been queried is outside the image
- * @author Jean-Christophe Malapert
+ * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
 public class JHIPSOutputImageException extends Exception {
     private static final long serialVersionUID = 2499532318568792301L;

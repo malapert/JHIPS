@@ -18,40 +18,27 @@
  ******************************************************************************/
 package fr.malapert.jhips.exception;
 
-import fr.malapert.jhips.JHIPS;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 /**
- * Exception for JHIPS
- *
+ * Tiles generation exception.
  * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
-public class JHIPSException extends Exception {
-
-    private static final long serialVersionUID = 2499532318568792301L;
-
-    public JHIPSException() {
+public class TilesGenerationException extends Error {
+    private static final long serialVersionUID = -150379700198989907L;
+    
+    public TilesGenerationException() {
         super();
-        Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, "Error");
-
     }
-
-    public JHIPSException(String message) {
+    
+    public TilesGenerationException(String message) {
         super(message);
-        Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, message);
-
     }
-
-    public JHIPSException(Throwable cause) {
+    
+    public TilesGenerationException(Throwable cause) {
         super(cause);
-        Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, "Error", cause);
-
     }
-
-    public JHIPSException(String message, Throwable cause) {
+    
+    public TilesGenerationException(String message, Throwable cause) {
         super(message, cause);
-        Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, message, cause);
-
     }
+    
 }
