@@ -284,9 +284,19 @@ public class MetadataFile {
             int x = (int) xy[0];
             //int y = (int) -(getHeight()- xy[1]);
             int y = (int) (getHeight() - xy[1]);
+            
+            int xmin = (int) ((this.image.getWidth() > getWidth()) 
+                    ? (this.image.getWidth() - getWidth())*0.5:0);
+            int xmax = (int) ((this.image.getWidth() > getWidth()) 
+                    ? getWidth()- (this.image.getWidth() - getWidth())*0.5:getWidth());
+            int ymin = (int) ((this.image.getHeight() > getHeight()) 
+                    ? (this.image.getHeight() - getHeight())*0.5:0);
+            int ymax = (int) ((this.image.getHeight() > getHeight()) 
+                    ? getWidth()- (this.image.getHeight() - getHeight())*0.5:getHeight());            
+            
 
             // The pixel to extract is outside the camera
-            if (x >= getWidth() || y >= getHeight() || x < 0 || y < 0) {
+            if (x >= xmax || y >= ymax || x < xmin || y < ymin) {
                 result = null;
             } else {
                 try {
