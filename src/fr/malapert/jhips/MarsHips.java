@@ -175,6 +175,7 @@ public class MarsHips extends JHIPS {
         hProj.processDirectory(new File("/home/malapert/Documents/MARS/PanoData"), hProj);
         hProj.processDirectory(new File("/home/malapert/Documents/MARS/PanoData/jcm/Test"), hProj);
         hProj.process();
+        hProj.createRGBTiles(true);
     }
 
 }

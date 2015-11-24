@@ -193,7 +193,7 @@ public class MetadataFileCollection {
                     green += c.getGreen();
                     blue += c.getBlue();
                     match++;
-                    //break;
+                    break;
                 }
             }
         }

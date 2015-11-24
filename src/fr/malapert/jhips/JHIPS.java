@@ -1,29 +1,32 @@
- /*******************************************************************************
+/**
+ * *****************************************************************************
  * Copyright 2015 - Jean-Christophe Malapert (jcmalapert@gmail.com)
  *
  * This file is part of JHIPS.
  *
- * JHIPS is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * JHIPS is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- * JHIPS is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * JHIPS is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
- ******************************************************************************/
+ * You should have received a copy of the GNU General Public License along with
+ * JHIPS. If not, see <http://www.gnu.org/licenses/>.
+ * ****************************************************************************
+ */
 package fr.malapert.jhips;
 
 import fr.malapert.jhips.metadata.MetadataFileCollection;
 import fr.malapert.jhips.metadata.MetadataFile;
 import fr.malapert.jhips.algorithm.HIPSGeneration;
 import fr.malapert.jhips.algorithm.HealpixMapByte;
+import fr.malapert.jhips.algorithm.RGBGeneration;
 import fr.malapert.jhips.util.FITSUtil;
 import fr.malapert.jhips.exception.JHIPSException;
+import fr.malapert.jhips.util.Utils;
 import healpix.essentials.HealpixBase;
 import healpix.essentials.HealpixUtils;
 import healpix.essentials.Scheme;
@@ -31,6 +34,12 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -290,8 +299,8 @@ public class JHIPS {
      * Fills the Healpix vectors for earch RGB channel. The Healpix vectors are
      * filled by iterating on each pixel on the sphere.
      * <p>
-     * For each pixel, we get the mean RGB pixel of all files that contains 
-     * this pixel.
+     * For each pixel, we get the mean RGB pixel of all files that contains this
+     * pixel.
      *
      * @param hpx Healpix index
      * @param collection List of files to process
@@ -301,16 +310,9 @@ public class JHIPS {
      * @throws Exception Healpix error
      */
     private void fillHealpixVector(final HealpixBase hpx, final MetadataFileCollection collection, final HealpixMapByte hpxByteR, final HealpixMapByte hpxByteG, final HealpixMapByte hpxByteB) throws Exception {
-        final String anim = "|/-\\";
         long nPix = hpx.getNpix();
         for (long pixel = 0; pixel < nPix; pixel++) {
-            
-            int percent = (int) (pixel * 100 / nPix);
-            if (percent % 10 == 0) {
-                System.out.print("\r" + anim.charAt((int) pixel % anim.length()) + " " + percent + "% done");
-                System.out.flush();
-            }
-
+            Utils.monitoring(pixel, nPix);
             Color c = collection.getRGB(hpx, pixel);
             if (c != null) {
                 hpxByteR.setPixel(pixel, (byte) c.getRed());
@@ -318,7 +320,7 @@ public class JHIPS {
                 hpxByteB.setPixel(pixel, (byte) c.getBlue());
             }
         }
-        System.out.println("\r" + anim.charAt((int) nPix % anim.length()) + " 100% done");
+        Utils.monitoring(nPix, nPix);
     }
 
     /**
@@ -345,5 +347,45 @@ public class JHIPS {
         Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Selecting order={0} / instead of {1}", new Object[]{order_req, 1 + HealpixUtils.ilog2((long) (nsd))});
         //Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Space required ... {0} Mb", 512*Math.pow(2, order_req) / 1024 / 1024 * 3);
         return 1 << order_req;
+    }
+
+    /**
+     * Creates RGB tiles and removes intermediate tiles.
+     * @param removeIntermediateFiles intermediate files
+     */
+    public void createRGBTiles(boolean removeIntermediateFiles) {
+        try {
+            RGBGeneration.create(getOutputDirectory());
+            if (removeIntermediateFiles) {
+                removeDirectory(getOutputDirectory().toString() + File.separator + RGBGeneration.R_DIRECTORY);
+                removeDirectory(getOutputDirectory().toString() + File.separator + RGBGeneration.G_DIRECTORY);
+                removeDirectory(getOutputDirectory().toString() + File.separator + RGBGeneration.B_DIRECTORY);
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    /**
+     * Deletes recursively a directory.
+     * @param directoryToDelete directory to delete
+     * @throws IOException 
+     */
+    private void removeDirectory(String directoryToDelete) throws IOException {
+        Path directory = Paths.get(directoryToDelete);
+        Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                Files.delete(dir);
+                return FileVisitResult.CONTINUE;
+            }
+
+        });
     }
 }
