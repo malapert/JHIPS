@@ -16,17 +16,24 @@
  * You should have received a copy of the GNU General Public License
  * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package fr.malapert.jhips.exception;
+package io.github.malapert.jhips.algorithm;
+
+import io.github.malapert.jhips.exception.ProjectionException;
+import healpix.essentials.Pointing;
+import healpix.essentials.Vec3;
 
 /**
- * Projection exception.
+ * Class utility for projection handling.
  * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
-public class ProjectionException extends Exception {
-    private static final long serialVersionUID = -1477327582174026744L;
-    
-    public ProjectionException() {
-        super();
-    }
-    
+public class Projection {
+
+    /**
+     * The supported projection.
+     */
+    public enum ProjectionType {
+        CAR, TAN
+    };
+
+
 }

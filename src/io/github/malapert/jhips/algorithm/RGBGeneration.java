@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package fr.malapert.jhips.algorithm;
+package io.github.malapert.jhips.algorithm;
 
-import fr.malapert.jhips.util.Utils;
+import io.github.malapert.jhips.util.Utils;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -40,7 +40,7 @@ import javax.imageio.ImageIO;
 /**
  * Creates RGB tiles from a R,G,B tiles.
  * 
- * @author Jean-Christophe Malapert
+ * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
 public class RGBGeneration {
 
@@ -49,6 +49,19 @@ public class RGBGeneration {
     public static String B_DIRECTORY = "b.fitsHiPS";
     public static String COLOR_DIRECTORY = "color";
 
+    /**
+     * Creates RGB tiles based on a set tiles on R, G, B color.
+     * <p>
+     * The RGB generation is created in outputDirectory/COLOR_DIRECTORY based on
+     * <ul>
+     * <li>R tiles in outputDirectory/R_DIRECTORY
+     * <li>G tiles in outputDirectory/G_DIRECTORY
+     * <li>B tiles in outputDirectory/B_DIRECTORY
+     * </ul>
+     * 
+     * @param outputDirectory output directory where RGB tiles are created
+     * @throws IOException 
+     */
     public static void create(File outputDirectory) throws IOException {
         Path rDirectory = Paths.get(outputDirectory.getAbsolutePath() + File.separator + R_DIRECTORY);
         Path originPropetyFile = Paths.get(outputDirectory.getAbsolutePath() + File.separator + R_DIRECTORY + File.separator+ "properties");
@@ -57,10 +70,17 @@ public class RGBGeneration {
         FileVisitor<Path> fileProcessor = new ProcessFile(nbPixels, outputDirectory);
         Files.walkFileTree(rDirectory, fileProcessor);
         Path destPropetyFile = Paths.get(outputDirectory.getAbsolutePath() + File.separator + COLOR_DIRECTORY + File.separator + "properties");
-        copyMetadata(originPropetyFile.toFile(), destPropetyFile.toFile());
+        createMetadata(originPropetyFile.toFile(), destPropetyFile.toFile());
 
     }
     
+    /**
+     * Returns order from a property file by reading hips_order keyword.
+     * @param properties property file
+     * @return the order
+     * @throws FileNotFoundException
+     * @throws IOException 
+     */
     private static int getOrder(File properties) throws FileNotFoundException, IOException {
         Properties propertyFile = new Properties();
         propertyFile.load(new FileInputStream(properties));
@@ -68,7 +88,15 @@ public class RGBGeneration {
         return Integer.parseInt(order);
     }
     
-    private static void copyMetadata(File src, File dest) throws FileNotFoundException, IOException {  
+    /**
+     * Creates metadata file for RGB tiles based on a property template from an
+     * existing tile.
+     * @param src source property
+     * @param dest destination property
+     * @throws FileNotFoundException
+     * @throws IOException 
+     */
+    private static void createMetadata(File src, File dest) throws FileNotFoundException, IOException {  
         Properties properties = new Properties();
         properties.load(new FileInputStream(src));
         properties.setProperty("hips_tile_format", "png");
@@ -77,11 +105,19 @@ public class RGBGeneration {
         properties.store(new FileOutputStream(dest), "");        
     }
 
+    /**
+     * Process the RGB tiles.
+     */
     private static final class ProcessFile extends SimpleFileVisitor<Path> {
 
         private long counter = 0;
         private final long nbPixels;
 
+        /**
+         * Creates an instance of the process.
+         * @param nbPixels number of pixels to create
+         * @param outputDirectory output directory where the result is created
+         */
         public ProcessFile(long nbPixels, File outputDirectory) {
             this.nbPixels = nbPixels;
         }
@@ -106,6 +142,11 @@ public class RGBGeneration {
             return FileVisitResult.CONTINUE;
         }
 
+        /**
+         * Create RGB tile
+         * @param aFile tile
+         * @throws IOException 
+         */
         private void createRGB(Path aFile) throws IOException {
             // loads R filter
             BufferedImage imageR = ImageIO.read(aFile.toFile());
@@ -141,6 +182,11 @@ public class RGBGeneration {
 
     }
 
+    /**
+     * Main program
+     * @param args
+     * @throws IOException 
+     */
     public static void main(String[] args) throws IOException {
         RGBGeneration.create(new File("/tmp/data"));
     }

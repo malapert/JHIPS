@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package fr.malapert.jhips.algorithm;
+package io.github.malapert.jhips.algorithm;
 
-import fr.malapert.jhips.JHIPS;
+import io.github.malapert.jhips.JHIPS;
 import healpix.essentials.*;
 import java.util.Arrays;
 

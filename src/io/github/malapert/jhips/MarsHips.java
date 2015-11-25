@@ -16,11 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package fr.malapert.jhips;
+package io.github.malapert.jhips;
 
-import fr.malapert.jhips.metadata.MetadataFile;
-import fr.malapert.jhips.algorithm.Projection;
-import fr.malapert.jhips.exception.JHIPSException;
+import io.github.malapert.jhips.metadata.MetadataFile;
+import io.github.malapert.jhips.algorithm.Projection;
+import io.github.malapert.jhips.exception.JHIPSException;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -66,11 +66,21 @@ public class MarsHips extends JHIPS {
      */
     private final static int NUMBER_VALUE_TO_EXTRACT = 6;
 
-    public MarsHips() {
-        super(12);
-        // remove 12 to get the full resolution but need space on disk and memory
+    /**
+     * Creates a HIPS map with a specific resolution.
+     * @param order Healpix order
+     */
+    public MarsHips(int order) {
+        super(order);
     }
 
+    /**
+     * Creates a HIPS map.
+     */
+    public MarsHips() {
+        super();
+    }    
+    
     /**
      * Extracts values from a metadata file.
      * <p>
@@ -89,7 +99,7 @@ public class MarsHips extends JHIPS {
      * @param filename the file where metadata must be extracted
      * @throws FileNotFoundException
      * @throws IOException
-     * @throws fr.malapert.jhips.exception.JHIPSException
+     * @throws io.github.malapert.jhips.exception.JHIPSException
      */
     public void readMetadata(String filename) throws FileNotFoundException, IOException, JHIPSException {
         String lblFile = filename.replace("png", "LBL");
@@ -169,11 +179,11 @@ public class MarsHips extends JHIPS {
      * @throws IOException 
      */
     public static void main(String[] args) throws MalformedURLException, JHIPSException, IOException {
-        MarsHips hProj = new MarsHips();
+        MarsHips hProj = new MarsHips(10);
         hProj.setOutputDirectory(new File("/tmp/data"));
         hProj.processDirectory(new File("/home/malapert/Documents/MARS/PanoData/jcm"), hProj);
-        hProj.processDirectory(new File("/home/malapert/Documents/MARS/PanoData"), hProj);
-        hProj.processDirectory(new File("/home/malapert/Documents/MARS/PanoData/jcm/Test"), hProj);
+        //hProj.processDirectory(new File("/home/malapert/Documents/MARS/PanoData"), hProj);
+        //hProj.processDirectory(new File("/home/malapert/Documents/MARS/PanoData/jcm/Test"), hProj);
         hProj.process();
         hProj.createRGBTiles(true);
     }

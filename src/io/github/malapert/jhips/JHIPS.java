@@ -17,16 +17,16 @@
  * JHIPS. If not, see <http://www.gnu.org/licenses/>.
  * ****************************************************************************
  */
-package fr.malapert.jhips;
+package io.github.malapert.jhips;
 
-import fr.malapert.jhips.metadata.MetadataFileCollection;
-import fr.malapert.jhips.metadata.MetadataFile;
-import fr.malapert.jhips.algorithm.HIPSGeneration;
-import fr.malapert.jhips.algorithm.HealpixMapByte;
-import fr.malapert.jhips.algorithm.RGBGeneration;
-import fr.malapert.jhips.util.FITSUtil;
-import fr.malapert.jhips.exception.JHIPSException;
-import fr.malapert.jhips.util.Utils;
+import io.github.malapert.jhips.metadata.MetadataFileCollection;
+import io.github.malapert.jhips.metadata.MetadataFile;
+import io.github.malapert.jhips.algorithm.HIPSGeneration;
+import io.github.malapert.jhips.algorithm.HealpixMapByte;
+import io.github.malapert.jhips.algorithm.RGBGeneration;
+import io.github.malapert.jhips.util.FITSUtil;
+import io.github.malapert.jhips.exception.JHIPSException;
+import io.github.malapert.jhips.util.Utils;
 import healpix.essentials.HealpixBase;
 import healpix.essentials.HealpixUtils;
 import healpix.essentials.Scheme;
@@ -111,7 +111,9 @@ public class JHIPS {
         System.out.println("processing http://www.fvalk.com/images/MaptoGeo/world-view-total.jpg");
         JHIPS hProj = new JHIPS();
         hProj.setOutputDirectory(new File("/tmp/data"));
-        hProj.process(new URL("http://www.fvalk.com/images/MaptoGeo/world-view-total.jpg"), 0, 0, new double[]{Math.PI * 2, Math.PI}, fr.malapert.jhips.algorithm.Projection.ProjectionType.CAR);
+        hProj.process(new URL("http://www.fvalk.com/images/MaptoGeo/world-view-total.jpg"), 0, 0, new double[]{Math.PI * 2, Math.PI}, io.github.malapert.jhips.algorithm.Projection.ProjectionType.CAR);
+        hProj.createRGBTiles(false);
+                
     }
 
     /**
@@ -186,7 +188,7 @@ public class JHIPS {
      * @param type the projection of the file to add
      * @throws java.io.IOException error when loading the file
      */
-    public void addFile(final URL file, double azimuthCenter, double elevationCenter, double[] fov, fr.malapert.jhips.algorithm.Projection.ProjectionType type) throws IOException {
+    public void addFile(final URL file, double azimuthCenter, double elevationCenter, double[] fov, io.github.malapert.jhips.algorithm.Projection.ProjectionType type) throws IOException {
         this.addFile(new MetadataFile(file, azimuthCenter, elevationCenter, fov, type));
     }
 
@@ -225,7 +227,7 @@ public class JHIPS {
             Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "{0} files are being processed ... ", getFiles().size());
 
             double scale = Math.toDegrees(getFiles().getScale()) * DEG2ARCSEC;
-            Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Computing pixel size ...  {0} arsec ", scale);
+            Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Computing pixel size ...  {0} arcsec ", scale);
 
             int nside = calculateNSide(scale);
 
@@ -252,7 +254,7 @@ public class JHIPS {
         process(inputFile.getFile(), inputFile.getCameraLongitude(), inputFile.getCameraLatitude(), inputFile.getCameraFov(), inputFile.getType());
     }
 
-    public void process(final URL file, double azimuthCenter, double elevationCenter, double[] fov, fr.malapert.jhips.algorithm.Projection.ProjectionType type) throws JHIPSException {
+    public void process(final URL file, double azimuthCenter, double elevationCenter, double[] fov, io.github.malapert.jhips.algorithm.Projection.ProjectionType type) throws JHIPSException {
         try {
             addFile(file, azimuthCenter, elevationCenter, fov, type);
             process();

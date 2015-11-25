@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package fr.malapert.jhips.metadata;
+package io.github.malapert.jhips.metadata;
 
 import healpix.essentials.HealpixBase;
 import java.awt.Color;
@@ -24,7 +24,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Stores all metadata of each file to project.
+ * Stores all metadata of each file to project and provides operations on them.
+ * 
+ * <p>
+ * MetadataFileCollection computes the highest resolution on all stored images.
+ * In addition to that, it allows to extract a pixel from stored images based on
+ * horizontal coordinates or Healpix pixel.
  *
  * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
@@ -35,7 +40,7 @@ public class MetadataFileCollection {
      */
     private List<MetadataFile> metadataFiles;
     /**
-     * Pixel's scale in radian/pixel along width x height
+     * Pixel's scale in radians/pixel along width x height
      */
     private double[] scale;
 
@@ -165,7 +170,7 @@ public class MetadataFileCollection {
                 green += c.getGreen();
                 blue += c.getBlue();
                 match++;
-                //break;
+                break;
             }
         }
         return (match == 0) ? null : new Color(red / match, green / match, blue / match, alpha / match);

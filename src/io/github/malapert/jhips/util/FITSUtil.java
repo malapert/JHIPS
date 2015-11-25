@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package fr.malapert.jhips.util;
+package io.github.malapert.jhips.util;
 
-import fr.malapert.jhips.algorithm.HealpixMapByte;
+import io.github.malapert.jhips.algorithm.HealpixMapByte;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.GregorianCalendar;

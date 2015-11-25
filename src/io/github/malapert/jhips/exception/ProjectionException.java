@@ -16,42 +16,17 @@
  * You should have received a copy of the GNU General Public License
  * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package fr.malapert.jhips.exception;
-
-import fr.malapert.jhips.JHIPS;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+package io.github.malapert.jhips.exception;
 
 /**
- * Exception for JHIPS
- *
+ * Projection exception.
  * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
-public class JHIPSException extends Exception {
-
-    private static final long serialVersionUID = 2499532318568792301L;
-
-    public JHIPSException() {
+public class ProjectionException extends Exception {
+    private static final long serialVersionUID = -1477327582174026744L;
+    
+    public ProjectionException() {
         super();
-        Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, "Error");
-
     }
-
-    public JHIPSException(String message) {
-        super(message);
-        Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, message);
-
-    }
-
-    public JHIPSException(Throwable cause) {
-        super(cause);
-        Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, "Error", cause);
-
-    }
-
-    public JHIPSException(String message, Throwable cause) {
-        super(message, cause);
-        Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, message, cause);
-
-    }
+    
 }

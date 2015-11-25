@@ -16,28 +16,29 @@
  * You should have received a copy of the GNU General Public License
  * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package fr.malapert.jhips.exception;
+package io.github.malapert.jhips.exception;
 
 /**
- * Exception when the pixel that has been queried is outside the image
+ * Tiles generation exception.
  * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
-public class JHIPSOutputImageException extends Exception {
-    private static final long serialVersionUID = 2499532318568792301L;
+public class TilesGenerationException extends Error {
+    private static final long serialVersionUID = -150379700198989907L;
     
-    public JHIPSOutputImageException() {
+    public TilesGenerationException() {
         super();
     }
     
-    public JHIPSOutputImageException(String message) {
+    public TilesGenerationException(String message) {
         super(message);
     }
     
-    public JHIPSOutputImageException(Throwable cause) {
+    public TilesGenerationException(Throwable cause) {
         super(cause);
-    }  
+    }
     
-    public JHIPSOutputImageException(String message, Throwable cause) {
+    public TilesGenerationException(String message, Throwable cause) {
         super(message, cause);
-    }    
+    }
+    
 }

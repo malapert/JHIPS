@@ -16,29 +16,42 @@
  * You should have received a copy of the GNU General Public License
  * along with JHIPS.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package fr.malapert.jhips.exception;
+package io.github.malapert.jhips.exception;
+
+import io.github.malapert.jhips.JHIPS;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * Tiles generation exception.
+ * Exception for JHIPS
+ *
  * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
-public class TilesGenerationException extends Error {
-    private static final long serialVersionUID = -150379700198989907L;
-    
-    public TilesGenerationException() {
+public class JHIPSException extends Exception {
+
+    private static final long serialVersionUID = 2499532318568792301L;
+
+    public JHIPSException() {
         super();
+        Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, "Error");
+
     }
-    
-    public TilesGenerationException(String message) {
+
+    public JHIPSException(String message) {
         super(message);
+        Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, message);
+
     }
-    
-    public TilesGenerationException(Throwable cause) {
+
+    public JHIPSException(Throwable cause) {
         super(cause);
+        Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, "Error", cause);
+
     }
-    
-    public TilesGenerationException(String message, Throwable cause) {
+
+    public JHIPSException(String message, Throwable cause) {
         super(message, cause);
+        Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, message, cause);
+
     }
-    
 }
