@@ -1,5 +1,4 @@
-/**
- * *****************************************************************************
+/*******************************************************************************
  * Copyright 2015 - Jean-Christophe Malapert (jcmalapert@gmail.com)
  *
  * This file is part of JHIPS.
@@ -15,8 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * JHIPS. If not, see <http://www.gnu.org/licenses/>.
- * ****************************************************************************
- */
+ ******************************************************************************/
 package io.github.malapert.jhips;
 
 import io.github.malapert.jhips.metadata.MetadataFileCollection;
@@ -30,9 +28,12 @@ import io.github.malapert.jhips.util.Utils;
 import healpix.essentials.HealpixBase;
 import healpix.essentials.HealpixUtils;
 import healpix.essentials.Scheme;
+import io.github.malapert.jhips.metadata.JHipsMetadataProviderInterface;
+import io.github.malapert.jhips.metadata.PlanisphereMetadataProvider;
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -105,13 +106,15 @@ public class JHIPS {
      * Main program.
      *
      * @param args the command line arguments
-     * @throws java.lang.Exception
+     * @throws io.github.malapert.jhips.exception.JHIPSException
+     * @throws java.net.MalformedURLException
      */
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) throws JHIPSException, MalformedURLException  {
         System.out.println("processing http://www.fvalk.com/images/MaptoGeo/world-view-total.jpg");
         JHIPS hProj = new JHIPS();
-        hProj.setOutputDirectory(new File("/tmp/data"));
-        hProj.process(new URL("http://www.fvalk.com/images/MaptoGeo/world-view-total.jpg"), 0, 0, new double[]{Math.PI * 2, Math.PI}, io.github.malapert.jhips.algorithm.Projection.ProjectionType.CAR);
+        hProj.setOutputDirectory(new File("/tmp/data"));        
+        JHipsMetadataProviderInterface planisphere = new PlanisphereMetadataProvider(new URL("http://www.fvalk.com/images/MaptoGeo/world-view-total.jpg"));
+        hProj.process(new MetadataFile(planisphere, io.github.malapert.jhips.algorithm.Projection.ProjectionType.CAR));
         hProj.createRGBTiles(false);
                 
     }
@@ -182,22 +185,6 @@ public class JHIPS {
      * its projection.
      *
      * @param file the file to add
-     * @param azimuthCenter azimuth of the image center expressed in radians
-     * @param elevationCenter elevation of the image center expressed in radians
-     * @param fov the field of view in radians along azimuth and elevation
-     * @param type the projection of the file to add
-     * @throws java.io.IOException error when loading the file
-     */
-    public void addFile(final URL file, double azimuthCenter, double elevationCenter, double[] fov, io.github.malapert.jhips.algorithm.Projection.ProjectionType type) throws IOException {
-        this.addFile(new MetadataFile(file, azimuthCenter, elevationCenter, fov, type));
-    }
-
-    /**
-     * Add a file to process in order to merge it with other files in the same
-     * sphere. Each file is associated with its own camera's center, its FOV and
-     * its projection.
-     *
-     * @param file the file to add
      * @throws IOException error when loading a file
      */
     public void addFile(MetadataFile file) throws IOException {
@@ -251,16 +238,7 @@ public class JHIPS {
      * @throws JHIPSException error while processing
      */
     public void process(final MetadataFile inputFile) throws JHIPSException {
-        process(inputFile.getFile(), inputFile.getCameraLongitude(), inputFile.getCameraLatitude(), inputFile.getCameraFov(), inputFile.getType());
-    }
-
-    public void process(final URL file, double azimuthCenter, double elevationCenter, double[] fov, io.github.malapert.jhips.algorithm.Projection.ProjectionType type) throws JHIPSException {
-        try {
-            addFile(file, azimuthCenter, elevationCenter, fov, type);
-            process();
-        } catch (IOException ex) {
-            throw new JHIPSException(ex);
-        }
+        process();
     }
 
     /**

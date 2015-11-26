@@ -24,6 +24,9 @@ package io.github.malapert.jhips.util;
  */
 public class Utils {
 
+    /**
+     * String for animation on console.
+     */
     public static final String anim = "|/-\\";
 
     /**

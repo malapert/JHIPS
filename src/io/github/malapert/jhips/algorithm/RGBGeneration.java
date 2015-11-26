@@ -44,9 +44,24 @@ import javax.imageio.ImageIO;
  */
 public class RGBGeneration {
 
+    /**
+     * Directory where the R tiles are stored. 
+     */
     public static String R_DIRECTORY = "r.fitsHiPS";
+
+    /**
+     * Directory where the G tiles are stored.
+     */
     public static String G_DIRECTORY = "g.fitsHiPS";
+
+    /**
+     * Directory where the B tiles are stored.
+     */
     public static String B_DIRECTORY = "b.fitsHiPS";
+
+    /**
+     * Directory where the color tiles are stored.
+     */
     public static String COLOR_DIRECTORY = "color";
 
     /**

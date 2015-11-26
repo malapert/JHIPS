@@ -35,7 +35,13 @@ import nom.tam.util.BufferedDataOutputStream;
  */
 public class FITSUtil {
 
-    public static void writeByteMap(HealpixMapByte map, String filename)
+    /**
+     * Write Healpix map on a file.
+     * @param map the Healpix map to store
+     * @param filename filename
+     * @throws Exception
+     */
+    public static void writeByteMap(final HealpixMapByte map, final String filename)
             throws Exception {
         FitsFactory.setUseHierarch(true);
         FitsFactory.setUseAsciiTables(false);

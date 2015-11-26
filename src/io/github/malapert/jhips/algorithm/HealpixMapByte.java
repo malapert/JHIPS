@@ -29,16 +29,34 @@ public class HealpixMapByte extends HealpixBase {
 
     private byte[] data;
 
+    /**
+     * Creates a Healpix map with nside=1 and a nested scheme.
+     * @throws Exception
+     */
     public HealpixMapByte() throws Exception {
         this(1, Scheme.NESTED);
     }
 
+    /**
+     * Creates a Healpix map to store the result.
+     * @param nside_in Healpix nside
+     * @param scheme_in Healpix scheme
+     * @throws Exception
+     */
     public HealpixMapByte(long nside_in, Scheme scheme_in) throws Exception {
         super(nside_in, scheme_in);
         HealpixUtils.check(nside <= (1 << JHIPS.ORDER), "resolution too high");
         data = new byte[(int) getNpix()];
     }
 
+    /**
+     * Creates a Healpix map to store the result.
+     * <p>
+     * The nside is comuted automatically from data.
+     * @param data_in data to store
+     * @param scheme_in Healpix scheme
+     * @throws Exception
+     */
     public HealpixMapByte(byte[] data_in, Scheme scheme_in) throws Exception {
         super(npix2Nside(data_in.length), scheme_in);
         HealpixUtils.check(nside <= (1 << JHIPS.ORDER), "resolution too high");

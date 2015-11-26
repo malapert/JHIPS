@@ -25,18 +25,34 @@ package io.github.malapert.jhips.exception;
 public class TilesGenerationException extends Error {
     private static final long serialVersionUID = -150379700198989907L;
     
+    /**
+     *
+     */
     public TilesGenerationException() {
         super();
     }
     
+    /**
+     *
+     * @param message
+     */
     public TilesGenerationException(String message) {
         super(message);
     }
     
+    /**
+     *
+     * @param cause
+     */
     public TilesGenerationException(Throwable cause) {
         super(cause);
     }
     
+    /**
+     *
+     * @param message
+     * @param cause
+     */
     public TilesGenerationException(String message, Throwable cause) {
         super(message, cause);
     }

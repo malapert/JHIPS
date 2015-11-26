@@ -31,24 +31,40 @@ public class JHIPSException extends Exception {
 
     private static final long serialVersionUID = 2499532318568792301L;
 
+    /**
+     *
+     */
     public JHIPSException() {
         super();
         Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, "Error");
 
     }
 
+    /**
+     *
+     * @param message
+     */
     public JHIPSException(String message) {
         super(message);
         Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, message);
 
     }
 
+    /**
+     *
+     * @param cause
+     */
     public JHIPSException(Throwable cause) {
         super(cause);
         Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, "Error", cause);
 
     }
 
+    /**
+     *
+     * @param message
+     * @param cause
+     */
     public JHIPSException(String message, Throwable cause) {
         super(message, cause);
         Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, message, cause);

@@ -18,10 +18,6 @@
  ******************************************************************************/
 package io.github.malapert.jhips.algorithm;
 
-import io.github.malapert.jhips.exception.ProjectionException;
-import healpix.essentials.Pointing;
-import healpix.essentials.Vec3;
-
 /**
  * Class utility for projection handling.
  * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
@@ -32,7 +28,16 @@ public class Projection {
      * The supported projection.
      */
     public enum ProjectionType {
-        CAR, TAN
+
+        /**
+         * Plate carrée projection.
+         */
+        CAR,
+
+        /**
+         * Tangent projection.
+         */
+        TAN
     };
 
 

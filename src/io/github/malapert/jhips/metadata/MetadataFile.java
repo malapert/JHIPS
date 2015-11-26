@@ -15,17 +15,17 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * JHIPS. If not, see <http://www.gnu.org/licenses/>.
- * ****************************************************************************
+ *****************************************************************************
  */
 package io.github.malapert.jhips.metadata;
 
 import cds.moc.HealpixMoc;
 import cds.moc.MocCell;
-import com.sun.javafx.scene.CameraHelper;
 import healpix.essentials.HealpixBase;
 import healpix.essentials.Pointing;
 import healpix.essentials.RangeSet;
 import healpix.essentials.Scheme;
+import io.github.malapert.jhips.exception.JHIPSException;
 import io.github.malapert.jwcs.JWcs;
 import io.github.malapert.jwcs.WcsNumericalMap;
 import io.github.malapert.jwcs.proj.exception.JWcsException;
@@ -64,42 +64,17 @@ import javax.imageio.ImageIO;
  *
  * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
-public class MetadataFile {
-
-    /**
-     * Acquisition file from the camera.
-     */
-    private final URL file;
+public class MetadataFile implements JHipsMetadataProviderInterface {
 
     /**
      * Buffered image.
      */
     private final BufferedImage image;
-    /**
-     * Longitude of the camera's center in radians.
-     */
-    private double cameraLongitude;
-    /**
-     * Latitude of the camera's center in radians.
-     */
-    private double cameraLatitude;
-    /**
-     * Camera's FOV [along longitude, along latitude] in radians.
-     */
-    private final double[] cameraFov;
 
     /**
      * Pixel's scale in rad/pixel.
      */
     private double[] scale;
-
-    /**
-     * The real size of the image in pixels.
-     * <p>
-     * The requested image can be smaller or higher then the detector. This
-     * depends on the acquisition mode.
-     */
-    private int[] imageRequest;
 
     /**
      * The spatial index of the file.
@@ -111,68 +86,64 @@ public class MetadataFile {
      */
     private io.github.malapert.jhips.algorithm.Projection.ProjectionType type;
 
+    /**
+     * Wcs map that contains elements for computing (azimuth, elevation) <-->
+     * (x,y).
+     */
     private WcsNumericalMap wcs;
 
     /**
-     * creates an instance to store the file's metadata. By default, the
-     * projection for an image is TAN.
-     *
-     * @param file file to store
-     * @param longitude camera's center along longitude in radians
-     * @param latitude camera's center along latitude in radians
-     * @param cameraFov camera's fov along longitude and latitude in radians
-     * @throws IOException When an error happens by reading the file
+     * JHips metadata.
      */
-    public MetadataFile(final URL file, double longitude, double latitude, double[] cameraFov) throws IOException {
-        this(file, longitude, latitude, cameraFov, io.github.malapert.jhips.algorithm.Projection.ProjectionType.TAN);
-    }
+    private final JHipsMetadataProviderInterface metadata;
 
     /**
-     * Creates an instance to store the file's metadata. By default, the
-     * projection for an image is TAN and the light reaching the camera takes
-     * all the camera's detector.
+     * Creates an instance to store the file's metadata.
      *
-     * @param file file to store
-     * @param longitude camera's center along longitude in radian
-     * @param latitude camera's center along latitude in radian
-     * @param cameraFov camera's fov along longitude and latitude in radian
+     * @param metadata File metadata
      * @param type projection's type of the image
-     * @throws IOException When an error happens by reading the file
+     * @throws java.io.IOException
      */
-    public MetadataFile(final URL file, double longitude, double latitude, double[] cameraFov, io.github.malapert.jhips.algorithm.Projection.ProjectionType type) throws IOException {
-        this.file = file;
-        this.image = ImageIO.read(file);
-        this.imageRequest = new int[]{this.image.getWidth(), this.image.getHeight()};
-        this.cameraLongitude = longitude;
-        this.cameraLatitude = latitude;
-        this.cameraFov = cameraFov;
-        this.type = type;
-        this.scale = initPixelScale(this.imageRequest, cameraFov);
-        this.index = createIndex(longitude, latitude, cameraFov);
-        this.wcs = createWcs();
+    public MetadataFile(JHipsMetadataProviderInterface metadata, io.github.malapert.jhips.algorithm.Projection.ProjectionType type) throws JHIPSException {
         try {
-            this.wcs.doInit();
-        } catch (JWcsException ex) {
-            Logger.getLogger(MetadataFile.class.getName()).log(Level.SEVERE, null, ex);
+            this.metadata = metadata;
+            this.type = type;
+            this.image = ImageIO.read(metadata.getFile());
+            if (metadata.getSubImageSize()[0] == 0 && metadata.getSubImageSize()[1] == 0) {
+                metadata.setSubImageSize(new int[]{this.image.getWidth(), this.image.getHeight()});
+            }
+            this.scale = initPixelScale(metadata.getSubImageSize(), metadata.getFOV());
+            this.index = createIndex(metadata, this.scale);
+            this.wcs = createWcs();
+            try {
+                this.wcs.doInit();
+            } catch (JWcsException ex) {
+                Logger.getLogger(MetadataFile.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        } catch (IOException ex) {
+            throw new JHIPSException(ex);
         }
     }
 
     /**
      * Computes a spatial index of the image in order to boost the processing.
      *
-     * @param longitude the azimuth in radians of the center of the image
-     * @param latitude the elevation in radians of the center of the image.
-     * @param cameraFOV the FOV in radians of the camera along azimuth and
-     * elevation
+     * @param metadata JHips metadata
+     * @param pixelScale pixel scale in rad/pixel along X and Y axis
      * @return the spatial index
      */
-    private HealpixMoc createIndex(double longitude, double latitude, double[] cameraFOV) {
+    private HealpixMoc createIndex(final JHipsMetadataProviderInterface metadata, double[] pixelScale) {
         HealpixMoc moc;
         try {
             moc = new HealpixMoc();
             HealpixBase base = new HealpixBase(1024, Scheme.NESTED);
-            double radius = Math.sqrt(0.5 * cameraFOV[0] * 0.5 * cameraFOV[0] + 0.5 * cameraFOV[1] * 0.5 * cameraFOV[1]);
-            RangeSet range = base.queryDiscInclusive(new Pointing(0.5 * Math.PI - latitude, longitude), radius, 128);
+            double radius = Math.sqrt(0.5 * metadata.getFOV()[0] * 0.5 * metadata.getFOV()[0] + 0.5 * metadata.getFOV()[1] * 0.5 * metadata.getFOV()[1]);
+            double xFov = 0.5 * metadata.getDetectorSize()[0] - (metadata.getFirstSample()[0] + metadata.getSubImageSize()[0] * 0.5);
+            double yFov = 0.5 * metadata.getDetectorSize()[1] - (metadata.getFirstSample()[1] + metadata.getSubImageSize()[1] * 0.5);
+            double azimuthCenter = metadata.getHorizontalCoordinates()[0] + xFov * pixelScale[0];
+            double elevationCenter = metadata.getHorizontalCoordinates()[1] + yFov * pixelScale[1];
+
+            RangeSet range = base.queryDiscInclusive(new Pointing(0.5 * Math.PI - elevationCenter, azimuthCenter), radius, 128);
             RangeSet.ValueIterator iter = range.valueIterator();
             while (iter.hasNext()) {
                 final long pixNest = iter.next();
@@ -210,28 +181,12 @@ public class MetadataFile {
     }
 
     /**
-     * Sets the real image request in pixels.
-     *
-     * @param imageRequest size of image where light is on
-     */
-    public void setImageRequest(int[] imageRequest) {
-        this.imageRequest = imageRequest;
-        this.scale = computeScale(imageRequest, cameraFov);
-        this.wcs = this.createWcs();
-        try {
-            this.wcs.doInit();
-        } catch (JWcsException ex) {
-            Logger.getLogger(MetadataFile.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-
-    /**
      * Returns the real image request.
      *
      * @return the real image request
      */
     public int[] getImageRequest() {
-        return this.imageRequest;
+        return this.metadata.getSubImageSize();
     }
 
     /**
@@ -246,28 +201,29 @@ public class MetadataFile {
     /**
      * Returns the file's location.
      *
-     * @return the file
+     * @return the file location
      */
+    @Override
     public URL getFile() {
-        return file;
+        return this.metadata.getFile();
     }
 
     /**
-     * Returns the camera's center longitude in radians.
+     * Returns the elevation of the detector center in radians.
      *
      * @return the cameraLongitude in radians
      */
     public double getCameraLongitude() {
-        return cameraLongitude;
+        return this.metadata.getHorizontalCoordinates()[0];
     }
 
     /**
-     * Returns the camera's center latitude in radians.
+     * Returns the azimuth of the detector center in radians.
      *
      * @return the cameraLatitude in radians
      */
     public double getCameraLatitude() {
-        return cameraLatitude;
+        return this.metadata.getHorizontalCoordinates()[1];
     }
 
     /**
@@ -276,25 +232,25 @@ public class MetadataFile {
      * @return the cameraFov
      */
     public double[] getCameraFov() {
-        return cameraFov;
+        return this.metadata.getFOV();
     }
 
     /**
-     * Returns the image's width in pixels.
+     * Returns the part width of the detector that is illuminated.
      *
-     * @return the image's width
+     * @return the number of pixels that are illuminated along X axis
      */
-    public int getWidth() {
-        return this.imageRequest[0];
+    public int getSubImageWidth() {
+        return getSubImageSize()[0];
     }
 
     /**
-     * Returns the image's height in pixels.
+     * Returns the part height of the detector that is illuminated.
      *
-     * @return the image's height
+     * @return the number of pixels that are illuminated along Y axis
      */
-    public int getHeight() {
-        return this.imageRequest[1];
+    public int getSubImageHeight() {
+        return getSubImageSize()[1];
     }
 
     /**
@@ -315,58 +271,52 @@ public class MetadataFile {
      */
     private WcsNumericalMap createWcs() {
         Map map = new HashMap();
-        map.put(JWcs.CRPIX1, 0.5d * getWidth());
-        map.put(JWcs.CRPIX2, 0.5d * getHeight());
-//        if(this.file.getFile().contains("0739ML0031641260205464E01_DRCL")) {
-//            this.cameraLongitude = this.cameraLongitude - Math.toRadians(1);
-//            this.cameraLatitude = this.cameraLatitude + Math.toRadians(0.15);
-//        } 
+        map.put(JWcs.CRPIX1, 0.5d * getDetectorSize()[0]);
+        map.put(JWcs.CRPIX2, 0.5d * getDetectorSize()[1]);
         map.put(JWcs.CRVAL1, Math.toDegrees(getCameraLongitude()));
         map.put(JWcs.CRVAL2, Math.toDegrees(getCameraLatitude()));
         map.put(JWcs.CDELT1, Math.toDegrees(getScale()[0]));
         map.put(JWcs.CDELT2, Math.toDegrees(getScale()[1]));
         map.put(JWcs.NAXIS, 2);
-        map.put(JWcs.NAXIS1, getWidth());
-        map.put(JWcs.NAXIS2, getHeight());
+        map.put(JWcs.NAXIS1, getDetectorSize()[0]);
+        map.put(JWcs.NAXIS2, getDetectorSize()[1]);
         map.put(JWcs.CTYPE1, "RA---" + getType());
         map.put(JWcs.CTYPE1, "DEC--" + getType());
         map.put(JWcs.CROTA2, 0.0d); // No rotation for this instrument
         return new WcsNumericalMap(map);
     }
 
-//    private double[] correctedLensDistortion(double[] xy) {
-//        double a11 = 135.154157;
-//        double a12  =-0.038589;
-//        double a21 = 0;
-//        double a22 = 135.135135;
-//        double i0 = 588.405;
-//        double j0 = 834.620;        
-//        
-//        //double resultX = i0 + a11*xy[0] + a12*xy[1];
-//        //double resultY = j0 + a21*xy[0] + a22*xy[1];
-//        double resultX = xy[0];
-//        double resultY = xy[1];
-//        double xCenterLens = getWidth() * 0.5;
-//        double yCenterLens = getWidth() * 0.5;
-//        double x0 = -0.113876;
-//        double y0 = 0.152029;
-//        double dx = xy[0]* 0.0074 - (xCenterLens * 0.0074 + x0) ; //https://www.google.fr/url?sa=t&rct=j&q=&esrc=s&source=web&cd=3&cad=rja&uact=8&ved=0ahUKEwj79qDMoKvJAhWC1hoKHUwQA28QFggvMAI&url=http%3A%2F%2Fwww.lpi.usra.edu%2Fmeetings%2Flpsc2011%2Fpdf%2F2738.pdf&usg=AFQjCNEUtyTBIlDLuKCrcIvATjI6uqY3wQ&sig2=8pFTQTqOUhOqdnfDYgRJBA&bvm=bv.108194040,d.d2s
-//        double dy = xy[1]* 0.0074 - (yCenterLens * 0.0074 + y0) ;
-//        double r = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
-//        if (r != 0) {
-//            double k1 = -1.118977e-04;
-//            double k2 = -1.023513e-06;
-//            double k3 = 0;
-//            double dr = k1 * Math.pow(r, 3) + k2 * Math.pow(r, 5) + k3 * Math.pow(r, 7);
-//            double deltaX = xy[0] * dr / r;
-//            double deltaY = xy[1] * dr / r;
-//            System.out.println(resultX+" , "+resultY+" - (dx,dy)=("+deltaX+" , "+deltaY);
-//            resultX += deltaX;
-//            resultY += deltaY;
-//            
-//        }
-//        return new double[]{resultX, resultY};
-//    }
+    /**
+     * Applies the lens distortion on the whole detector.
+     *
+     * @param xy the pixel coordinates
+     * @return the corrected pixel coordinates
+     */
+    private double[] correctedLensDistortion(double[] xy) {
+        double resultX = xy[0];
+        double resultY = xy[1];
+        if (getDistortionCoeff() != null) {
+            double xCenterLens = getSubImageWidth() * 0.5 + getFirstSample()[0];
+            double yCenterLens = getSubImageHeight() * 0.5 + getFirstSample()[1];
+            double x0 = getDistortionCoeff().get(getInstrumentID())[0];
+            double y0 = getDistortionCoeff().get(getInstrumentID())[1];
+            double dx = xy[0] * getPixelSize()[0] - (xCenterLens * getPixelSize()[0] + x0); //https://www.google.fr/url?sa=t&rct=j&q=&esrc=s&source=web&cd=3&cad=rja&uact=8&ved=0ahUKEwj79qDMoKvJAhWC1hoKHUwQA28QFggvMAI&url=http%3A%2F%2Fwww.lpi.usra.edu%2Fmeetings%2Flpsc2011%2Fpdf%2F2738.pdf&usg=AFQjCNEUtyTBIlDLuKCrcIvATjI6uqY3wQ&sig2=8pFTQTqOUhOqdnfDYgRJBA&bvm=bv.108194040,d.d2s
+            double dy = xy[1] * getPixelSize()[1] - (yCenterLens * getPixelSize()[1] + y0);
+            double r = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+            if (r != 0) {
+                double k1 = getDistortionCoeff().get(getInstrumentID())[2];
+                double k2 = getDistortionCoeff().get(getInstrumentID())[3];
+                double k3 = getDistortionCoeff().get(getInstrumentID())[4];
+                double dr = k1 * Math.pow(r, 3) + k2 * Math.pow(r, 5) + k3 * Math.pow(r, 7);
+                double deltaX = xy[0] * dr / r;
+                double deltaY = xy[1] * dr / r;
+                resultX += deltaX;
+                resultY += deltaY;
+
+            }
+        }
+        return new double[]{resultX, resultY};
+    }
 
     /**
      * Returns the RGB color from a pixel based on a longitude and latitude.
@@ -379,22 +329,23 @@ public class MetadataFile {
         Color result = null;
         try {
             double[] xy = this.wcs.wcs2pix(Math.toDegrees(longitude), Math.toDegrees(latitude));
-            //xy = correctedLensDistortion(xy);
+            xy = correctedLensDistortion(xy);
+            int x = (int) xy[0] - getFirstSample()[0];
+            int y = (int) xy[1] - getFirstSample()[1];
+            x = (int) (x + 0.5 * (image.getWidth() - getSubImageWidth()));
+            y = (int) (image.getHeight() - (y + 0.5 * (image.getWidth() - getSubImageWidth())));
 
-            int x = (int) (xy[0] + 0.5 * (image.getWidth() - getWidth()));
-            int y = (int) (image.getHeight() - 1 - (xy[1] + 0.5 * (image.getWidth() - getWidth())));
-
-            int xmin = (int) ((this.image.getWidth() > getWidth())
-                    ? Math.ceil((this.image.getWidth() - getWidth()) * 0.5)
+            int xmin = (int) ((this.image.getWidth() > getSubImageWidth())
+                    ? Math.ceil((this.image.getWidth() - getSubImageWidth()) * 0.5)
                     : 0);
-            int xmax = (int) ((this.image.getWidth() > getWidth())
-                    ? Math.floor(getWidth() - (this.image.getWidth() - getWidth()) * 0.5)
+            int xmax = (int) ((this.image.getWidth() > getSubImageWidth())
+                    ? Math.floor(getSubImageWidth() - (this.image.getWidth() - getSubImageWidth()) * 0.5)
                     : this.image.getWidth());
-            int ymin = (int) ((this.image.getHeight() > getHeight())
-                    ? Math.ceil((this.image.getHeight() - getHeight())) * 0.5
+            int ymin = (int) ((this.image.getHeight() > getSubImageHeight())
+                    ? Math.ceil((this.image.getHeight() - getSubImageHeight())) * 0.5
                     : 0);
-            int ymax = (int) ((this.image.getHeight() > getHeight())
-                    ? Math.floor(getWidth() - (this.image.getHeight() - getHeight()) * 0.5)
+            int ymax = (int) ((this.image.getHeight() > getSubImageHeight())
+                    ? Math.floor(getSubImageWidth() - (this.image.getHeight() - getSubImageHeight()) * 0.5)
                     : this.image.getHeight());
 
             // The pixel to extract is outside the camera
@@ -405,7 +356,7 @@ public class MetadataFile {
                     result = new Color(image.getRGB(x, y));
                 } catch (ArrayIndexOutOfBoundsException ex) {
                     Logger.getLogger(MetadataFile.class.getName()).log(Level.SEVERE, "Error when extracting values (x,y) = ({0},{1}) from file {2}", new Object[]{x, y, getFile().toString()});
-                    Logger.getLogger(MetadataFile.class.getName()).log(Level.SEVERE, "(width, height) = ({0},{1}) , imgRequest=({2},{3})", new Object[]{getWidth(), getHeight(), getImageRequest()[0], getImageRequest()[1]});
+                    Logger.getLogger(MetadataFile.class.getName()).log(Level.SEVERE, "(width, height) = ({0},{1}) , imgRequest=({2},{3})", new Object[]{getSubImageWidth(), getSubImageHeight(), getImageRequest()[0], getImageRequest()[1]});
                     result = null;
                 }
             }
@@ -443,5 +394,50 @@ public class MetadataFile {
      */
     public boolean isInside(int order, long pixel) {
         return this.index.isIntersecting(order, pixel);
+    }
+
+    @Override
+    public double[] getHorizontalCoordinates() {
+        return this.metadata.getHorizontalCoordinates();
+    }
+
+    @Override
+    public double[] getFOV() {
+        return this.metadata.getFOV();
+    }
+
+    @Override
+    public void setSubImageSize(int[] subImage) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public int[] getSubImageSize() {
+        return this.metadata.getSubImageSize();
+    }
+
+    @Override
+    public int[] getFirstSample() {
+        return this.metadata.getFirstSample();
+    }
+
+    @Override
+    public String getInstrumentID() {
+        return this.metadata.getInstrumentID();
+    }
+
+    @Override
+    public Map<String, double[]> getDistortionCoeff() {
+        return this.metadata.getDistortionCoeff();
+    }
+
+    @Override
+    public double[] getPixelSize() {
+        return this.metadata.getPixelSize();
+    }
+
+    @Override
+    public int[] getDetectorSize() {
+        return this.metadata.getDetectorSize();
     }
 }
