@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License along with
  * JHIPS. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************
+ * ****************************************************************************
  */
 package io.github.malapert.jhips.metadata;
 
@@ -98,11 +98,18 @@ public class MetadataFile implements JHipsMetadataProviderInterface {
     private final JHipsMetadataProviderInterface metadata;
 
     /**
+     * Valid solution in the pixel range in the graphic reference frame.
+     * <p>
+     * [xmin, xmax, ymin, ymax]
+     */
+    private final int[] validatedPixelRange = new int[4];
+
+    /**
      * Creates an instance to store the file's metadata.
      *
      * @param metadata File metadata
      * @param type projection's type of the image
-     * @throws java.io.IOException
+     * @throws io.github.malapert.jhips.exception.JHIPSException
      */
     public MetadataFile(JHipsMetadataProviderInterface metadata, io.github.malapert.jhips.algorithm.Projection.ProjectionType type) throws JHIPSException {
         try {
@@ -120,9 +127,34 @@ public class MetadataFile implements JHipsMetadataProviderInterface {
             } catch (JWcsException ex) {
                 Logger.getLogger(MetadataFile.class.getName()).log(Level.SEVERE, null, ex);
             }
+            computeValidatedRangePixel();
         } catch (IOException ex) {
             throw new JHIPSException(ex);
         }
+    }
+
+    /**
+     * Computed validated pixel range.
+     * <p>
+     * Basically, this computation remove the image borders from the solution
+     */
+    private void computeValidatedRangePixel() {
+        int xmin = (int) ((this.image.getWidth() > getSubImageWidth())
+                ? Math.ceil((this.image.getWidth() - getSubImageWidth()) * 0.5)
+                : 0);
+        int xmax = (int) ((this.image.getWidth() > getSubImageWidth())
+                ? Math.floor(getSubImageWidth() - (this.image.getWidth() - getSubImageWidth()) * 0.5)
+                : this.image.getWidth());
+        int ymin = (int) ((this.image.getHeight() > getSubImageHeight())
+                ? Math.ceil((this.image.getHeight() - getSubImageHeight())) * 0.5
+                : 0);
+        int ymax = (int) ((this.image.getHeight() > getSubImageHeight())
+                ? Math.floor(getSubImageWidth() - (this.image.getHeight() - getSubImageHeight()) * 0.5)
+                : this.image.getHeight());
+        this.validatedPixelRange[0] = xmin;
+        this.validatedPixelRange[1] = xmax;
+        this.validatedPixelRange[2] = ymin;
+        this.validatedPixelRange[3] = ymax;
     }
 
     /**
@@ -328,28 +360,22 @@ public class MetadataFile implements JHipsMetadataProviderInterface {
     public Color getRGB(double longitude, double latitude) {
         Color result = null;
         try {
+            // computes position in the camera reference frame
             double[] xy = this.wcs.wcs2pix(Math.toDegrees(longitude), Math.toDegrees(latitude));
+            
+            // applies correction on lens distortion
             xy = correctedLensDistortion(xy);
+            
+            // computes position in the sub-image reference frame
             int x = (int) xy[0] - getFirstSample()[0];
             int y = (int) xy[1] - getFirstSample()[1];
+            
+            // computes position in the PNG reference frame
             x = (int) (x + 0.5 * (image.getWidth() - getSubImageWidth()));
-            y = (int) (image.getHeight() - (y + 0.5 * (image.getWidth() - getSubImageWidth())));
+            y = (int) (image.getHeight() - (y + 0.5 * (image.getHeight() - getSubImageHeight())));
 
-            int xmin = (int) ((this.image.getWidth() > getSubImageWidth())
-                    ? Math.ceil((this.image.getWidth() - getSubImageWidth()) * 0.5)
-                    : 0);
-            int xmax = (int) ((this.image.getWidth() > getSubImageWidth())
-                    ? Math.floor(getSubImageWidth() - (this.image.getWidth() - getSubImageWidth()) * 0.5)
-                    : this.image.getWidth());
-            int ymin = (int) ((this.image.getHeight() > getSubImageHeight())
-                    ? Math.ceil((this.image.getHeight() - getSubImageHeight())) * 0.5
-                    : 0);
-            int ymax = (int) ((this.image.getHeight() > getSubImageHeight())
-                    ? Math.floor(getSubImageWidth() - (this.image.getHeight() - getSubImageHeight()) * 0.5)
-                    : this.image.getHeight());
-
-            // The pixel to extract is outside the camera
-            if (x >= xmax || y >= ymax || x < xmin || y < ymin) {
+            // Extracts only the physical measurement - remove the image borders
+            if (x >= this.validatedPixelRange[1] || y >= this.validatedPixelRange[3] || x < this.validatedPixelRange[0] || y < this.validatedPixelRange[2]) {
                 result = null;
             } else {
                 try {

@@ -4,7 +4,7 @@ This package contains the main library and an example.<br/>
 io.github.malapert.jhips is a Java package to create HIPS tiles from a set of
 graphic images.
 
-For the creation of tiles, JHIPS considers the following caracteristics :
+For the creation of tiles, JHIPS considers the following characteristics :
 <ul>
 <li> a detector
 <li> the illuminated part of the detector

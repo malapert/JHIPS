@@ -97,7 +97,7 @@ public class MastPanorama extends JHIPS {
      * @throws JHIPSException
      */
     public static void main(String[] args) throws JHIPSException {
-        MastPanorama hProj = new MastPanorama();
+        MastPanorama hProj = new MastPanorama(10);
         hProj.setOutputDirectory(new File("/tmp/data"));
         //hProj.processDirectory(new File("/home/malapert/Documents/MARS/test"), hProj);
         //hProj.processDirectory(new File("/home/malapert/Documents/MARS/SOL739"), hProj);
