@@ -28,12 +28,15 @@ import io.github.malapert.jhips.util.Utils;
 import healpix.essentials.HealpixBase;
 import healpix.essentials.HealpixUtils;
 import healpix.essentials.Scheme;
-import io.github.malapert.jhips.metadata.JHipsMetadataProviderInterface;
-import io.github.malapert.jhips.metadata.PlanisphereMetadataProvider;
+import io.github.malapert.jhips.provider.JHipsMetadata;
+import io.github.malapert.jhips.provider.JHipsMetadataProviderInterface;
+import io.github.malapert.jhips.provider.Mars_Sol_1463;
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -109,12 +112,11 @@ public class JHIPS {
      * @throws io.github.malapert.jhips.exception.JHIPSException
      * @throws java.net.MalformedURLException
      */
-    public static void main(String[] args) throws JHIPSException, MalformedURLException  {
-        System.out.println("processing http://www.fvalk.com/images/MaptoGeo/world-view-total.jpg");
+    public static void main(String[] args) throws JHIPSException, MalformedURLException, URISyntaxException  {
         JHIPS hProj = new JHIPS();
         hProj.setOutputDirectory(new File("/tmp/data"));        
-        JHipsMetadataProviderInterface planisphere = new PlanisphereMetadataProvider(new URL("http://www.fvalk.com/images/MaptoGeo/world-view-total.jpg"));
-        hProj.process(new MetadataFile(planisphere, io.github.malapert.jhips.algorithm.Projection.ProjectionType.CAR));
+        JHipsMetadata sol1463 = new Mars_Sol_1463(new File("/home/malapert/Downloads/curiosity/Curiosity_sol1463_2PicsFrom1466_MAHLI_ColorCorrected_Large.jpg"));
+        hProj.process(sol1463);
         hProj.createRGBTiles(false);
                 
     }
@@ -173,8 +175,8 @@ public class JHIPS {
      *
      * @param files the files to set
      */
-    public void addFiles(final List<MetadataFile> files) {
-        for (MetadataFile file : files) {
+    public void addFiles(final List<JHipsMetadata> files) {
+        for (JHipsMetadata file : files) {
             this.files.addMetadataFile(file);
         }
     }
@@ -187,7 +189,7 @@ public class JHIPS {
      * @param file the file to add
      * @throws IOException error when loading a file
      */
-    public void addFile(MetadataFile file) throws IOException {
+    public void addFile(JHipsMetadata file) throws IOException {
         this.files.addMetadataFile(file);
     }
 
@@ -225,7 +227,7 @@ public class JHIPS {
             List<String> filesHMapToProcess = createHealpixVector(getFiles(), hpx);
 
             Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Creating HIPS ... ");
-            generateHips(filesHMapToProcess);
+            generateHips(filesHMapToProcess, this.getFiles().getMetadataFiles().get(0));
         } catch (Exception ex) {
             throw new JHIPSException(ex);
         }
@@ -237,8 +239,14 @@ public class JHIPS {
      * @param inputFile The file to process
      * @throws JHIPSException error while processing
      */
-    public void process(final MetadataFile inputFile) throws JHIPSException {
-        process();
+    public void process(final JHipsMetadata inputFile) throws JHIPSException {
+        try {
+            this.addFile(inputFile);
+            process();
+        } catch (IOException ex) {
+            Logger.getLogger(JHIPS.class.getName()).log(Level.SEVERE, null, ex);
+            throw new JHIPSException(ex);
+        }
     }
 
     /**
@@ -308,9 +316,9 @@ public class JHIPS {
      *
      * @param filesHMapToProcess path to the Healpix vectors
      */
-    protected void generateHips(final List<String> filesHMapToProcess) {
+    protected void generateHips(final List<String> filesHMapToProcess, JHipsMetadataProviderInterface metadata) {
         for (String iterFile : filesHMapToProcess) {
-            hips.process(iterFile);
+            hips.process(iterFile, metadata);
         }
     }
 
@@ -324,7 +332,7 @@ public class JHIPS {
         double arcsec2rad = Math.PI / (180. * 60. * 60.);
         double nsd = Math.sqrt(4 * Math.PI / 12.) / (arcsec2rad * pixsize);
         int order_req = Math.max(0, Math.min(ORDER, 1 + HealpixUtils.ilog2((long) (nsd))));
-        Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Selecting order={0} / instead of {1}", new Object[]{order_req, 1 + HealpixUtils.ilog2((long) (nsd))});
+        Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Selecting order={0} / instead of {1}", new Object[]{ORDER, 1 + HealpixUtils.ilog2((long) (nsd))});
         //Logger.getLogger(JHIPS.class.getName()).log(Level.INFO, "Space required ... {0} Mb", 512*Math.pow(2, order_req) / 1024 / 1024 * 3);
         return 1 << order_req;
     }
@@ -335,7 +343,7 @@ public class JHIPS {
      */
     public void createRGBTiles(boolean removeIntermediateFiles) {
         try {
-            RGBGeneration.create(getOutputDirectory());
+            RGBGeneration.create(getOutputDirectory(), this.getFiles().getMetadataFiles().get(0));
             if (removeIntermediateFiles) {
                 removeDirectory(getOutputDirectory().toString() + File.separator + RGBGeneration.R_DIRECTORY);
                 removeDirectory(getOutputDirectory().toString() + File.separator + RGBGeneration.G_DIRECTORY);

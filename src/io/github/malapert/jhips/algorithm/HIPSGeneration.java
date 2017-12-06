@@ -21,6 +21,7 @@ package io.github.malapert.jhips.algorithm;
 import cds.allsky.Context;
 import cds.allsky.HipsGen;
 import io.github.malapert.jhips.exception.TilesGenerationException;
+import io.github.malapert.jhips.provider.JHipsMetadataProviderInterface;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -30,10 +31,7 @@ import java.util.logging.Logger;
  * Generates HIPS tiles from a Healpix map file.
  * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
  */
-public class HIPSGeneration extends HipsGen {
-    
-    private String label = "";
-    private String publisher = "JC Malapert (jcmalapert@gmail.com)";    
+public class HIPSGeneration extends HipsGen {   
 
     /**
      * Creates an instance.
@@ -52,57 +50,20 @@ public class HIPSGeneration extends HipsGen {
      * <li>pixelCut=0 255
      * </ul>
      * @param in 
+     * @param metadata 
      */
-    public void process(String in) {
+    public void process(String in, JHipsMetadataProviderInterface metadata) {
         this.context = new Context();
         try {
             List<String> args = new ArrayList();
             args.add("in="+in);
-            args.add("-f");
-            if(!getLabel().isEmpty()) {
-                args.add("label="+getLabel());
-            }
-            if(!getPublisher().isEmpty()) {
-                args.add("publisher="+getPublisher());
-            }
-            args.add("pixelCut=0 255");
+            args.add("-f");                      
+            args.add("pixelCut="+metadata.getHips_pixel_cut());
             this.execute(args.toArray(new String[]{}));
         } catch (Exception ex) {
             Logger.getLogger(HIPSGeneration.class.getName()).log(Level.SEVERE, null, ex);
             throw new TilesGenerationException(ex);
         }
-    }
-
-    /**
-     * Returns the label.
-     * @return the label
-     */
-    private String getLabel() {
-        return label;
-    }
-
-    /**
-     * Sets the label.
-     * @param label the label to set
-     */
-    private void setLabel(String label) {
-        this.label = label;
-    }
-
-    /**
-     * Returns the publisher.
-     * @return the publisher
-     */
-    private String getPublisher() {
-        return publisher;
-    }
-
-    /**
-     * Sets the publisher.
-     * @param publisher the publisher to set
-     */
-    private void setPublisher(String publisher) {
-        this.publisher = publisher;
     }
 
 }

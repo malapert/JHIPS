@@ -18,6 +18,7 @@
  ******************************************************************************/
 package io.github.malapert.jhips.algorithm;
 
+import io.github.malapert.jhips.provider.JHipsMetadataProviderInterface;
 import io.github.malapert.jhips.util.Utils;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -75,9 +76,10 @@ public class RGBGeneration {
      * </ul>
      * 
      * @param outputDirectory output directory where RGB tiles are created
+     * @param metadata
      * @throws IOException 
      */
-    public static void create(File outputDirectory) throws IOException {
+    public static void create(File outputDirectory, JHipsMetadataProviderInterface metadata) throws IOException {
         Path rDirectory = Paths.get(outputDirectory.getAbsolutePath() + File.separator + R_DIRECTORY);
         Path originPropetyFile = Paths.get(outputDirectory.getAbsolutePath() + File.separator + R_DIRECTORY + File.separator+ "properties");
         int order = getOrder(originPropetyFile.toFile());
@@ -85,7 +87,7 @@ public class RGBGeneration {
         FileVisitor<Path> fileProcessor = new ProcessFile(nbPixels, outputDirectory);
         Files.walkFileTree(rDirectory, fileProcessor);
         Path destPropetyFile = Paths.get(outputDirectory.getAbsolutePath() + File.separator + COLOR_DIRECTORY + File.separator + "properties");
-        createMetadata(originPropetyFile.toFile(), destPropetyFile.toFile());
+        createMetadata(metadata, originPropetyFile.toFile(), destPropetyFile.toFile());
 
     }
     
@@ -111,12 +113,86 @@ public class RGBGeneration {
      * @throws FileNotFoundException
      * @throws IOException 
      */
-    private static void createMetadata(File src, File dest) throws FileNotFoundException, IOException {  
+    private static void createMetadata(JHipsMetadataProviderInterface metadata, File src, File dest) throws FileNotFoundException, IOException {  
         Properties properties = new Properties();
         properties.load(new FileInputStream(src));
         properties.setProperty("hips_tile_format", "png");
         properties.setProperty("format", "png");
-        properties.setProperty("hips_creation_date", Calendar.getInstance().getTime().toString());
+        if(metadata.getBib_reference() != null) {
+            properties.setProperty("bib_reference", metadata.getBib_reference());            
+        }
+        if(metadata.getBib_reference_url() != null) {
+            properties.setProperty("bib_reference_url", metadata.getBib_reference_url());                        
+        }        
+        if(metadata.getCreator_did() != null) {
+            properties.setProperty("creator_did", metadata.getCreator_did());                        
+        }        
+        if(metadata.getData_ucd() != null) {
+            properties.setProperty("data_ucd", metadata.getData_ucd());                                    
+        }        
+        if(metadata.getDataproduct_subtype() != null) {
+            properties.setProperty("dataproduct_subtype", metadata.getDataproduct_subtype());                                                
+        }        
+        if(metadata.getDataproduct_type() != null) {
+            properties.setProperty("dataproduct_type", metadata.getDataproduct_type());                                                
+        }               
+        if(metadata.getHips_copyright() != null) {
+            properties.setProperty("hips_copyright", metadata.getHips_copyright());                                                
+        }        
+        if(metadata.getHips_creator() != null) {
+            properties.setProperty("hips_creator", metadata.getHips_creator());                                                
+        }        
+        if(metadata.getHips_frame() != null) {
+            properties.setProperty("hips_frame", metadata.getHips_frame());                                                
+        }        
+        if(metadata.getHips_pixel_cut() != null) {
+            properties.setProperty("hips_pixel_cut", metadata.getHips_pixel_cut());                                                
+        }        
+        if(metadata.getHips_progenitor_url() != null) {
+            properties.setProperty("hips_progenitor_url", metadata.getHips_progenitor_url());                                                
+        } 
+        if(metadata.getHips_release_date() != null) {
+            properties.setProperty("hips_creation_date", metadata.getHips_creation_date());                                                
+        }          
+        if(metadata.getHips_release_date() != null) {
+            properties.setProperty("hips_release_date", metadata.getHips_release_date());                                                
+        }        
+        if(metadata.getHips_status() != null) {
+            properties.setProperty("hips_status", metadata.getHips_status());                                                
+        }        
+        if(metadata.getObs_ack() != null) {
+            properties.setProperty("obs_ack", metadata.getObs_ack());                                                
+        }        
+        if(metadata.getObs_collection() != null) {
+            properties.setProperty("obs_collection", metadata.getObs_collection());                                                
+        }
+        if(metadata.getObs_copyright() != null) {
+            properties.setProperty("obs_copyright", metadata.getObs_copyright());                                                
+        }        
+        if(metadata.getObs_copyright_url() != null) {
+            properties.setProperty("obs_copyright_url", metadata.getObs_copyright_url());                                                
+        }        
+        if(metadata.getObs_description() != null) {
+            properties.setProperty("obs_description", metadata.getObs_description());                                                
+        }        
+        if(metadata.getObs_regime() != null) {
+            properties.setProperty("obs_regime", metadata.getObs_regime());                                                
+        }        
+        if(metadata.getObs_title() != null) {
+            properties.setProperty("obs_title", metadata.getObs_title());                                                
+        }        
+        if(metadata.getProv_progenitor() != null) {
+            properties.setProperty("prov_progenitor", metadata.getProv_progenitor());                                                
+        }        
+        if(metadata.getPublisher_id() != null) {
+            properties.setProperty("publisher_id", metadata.getPublisher_id());                                                
+        }  
+        if(metadata.getVersion() != null) {
+            properties.setProperty("version", metadata.getVersion());                                                
+        }  
+        if(metadata.getHips_builder() != null) {
+            properties.setProperty("hips_builder", metadata.getHips_builder());                                                
+        }          
         properties.store(new FileOutputStream(dest), "");        
     }
 
@@ -203,7 +279,7 @@ public class RGBGeneration {
      * @throws IOException 
      */
     public static void main(String[] args) throws IOException {
-        RGBGeneration.create(new File("/tmp/data"));
+        //RGBGeneration.create(new File("/tmp/data"));
     }
 
 }

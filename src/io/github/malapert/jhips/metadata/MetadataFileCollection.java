@@ -19,9 +19,14 @@
 package io.github.malapert.jhips.metadata;
 
 import healpix.essentials.HealpixBase;
+import io.github.malapert.jhips.algorithm.Projection;
+import io.github.malapert.jhips.exception.JHIPSException;
+import io.github.malapert.jhips.provider.JHipsMetadata;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Stores all metadata of each file to project and provides operations on them.
@@ -38,7 +43,7 @@ public class MetadataFileCollection {
     /**
      * List of files to project.
      */
-    private List<MetadataFile> metadataFiles;
+    private List<JHipsMetadata> metadataFiles;
     /**
      * Pixel's scale in radians/pixel along width x height
      */
@@ -48,7 +53,7 @@ public class MetadataFileCollection {
      * Creates an instance of metadata collection.
      */
     public MetadataFileCollection() {
-        this(new ArrayList<MetadataFile>());
+        this(new ArrayList<JHipsMetadata>());
     }
 
     /**
@@ -56,7 +61,7 @@ public class MetadataFileCollection {
      *
      * @param files files to project
      */
-    public MetadataFileCollection(final List<MetadataFile> files) {
+    public MetadataFileCollection(final List<JHipsMetadata> files) {
         setMetadataFiles(files);
     }
 
@@ -65,7 +70,7 @@ public class MetadataFileCollection {
      *
      * @return the metadataFiles
      */
-    public List<MetadataFile> getMetadataFiles() {
+    public List<JHipsMetadata> getMetadataFiles() {
         return metadataFiles;
     }
 
@@ -74,7 +79,7 @@ public class MetadataFileCollection {
      *
      * @param files the metadataFiles to set
      */
-    public final void setMetadataFiles(final List<MetadataFile> files) {
+    public final void setMetadataFiles(final List<JHipsMetadata> files) {
         this.metadataFiles = files;
         scale = computeHighestResolution(files);
     }
@@ -84,7 +89,7 @@ public class MetadataFileCollection {
      *
      * @param file
      */
-    public void addMetadataFile(final MetadataFile file) {
+    public void addMetadataFile(final JHipsMetadata file) {
         getMetadataFiles().add(file);
         scale = computeHighestResolution(scale, file);
     }
@@ -123,9 +128,9 @@ public class MetadataFileCollection {
      * @param files files in which the highest resolution is searched
      * @return The highest resolution along width and height in radian/pixel
      */
-    private double[] computeHighestResolution(final List<MetadataFile> files) {
+    private double[] computeHighestResolution(final List<JHipsMetadata> files) {
         double[] highestScale = new double[]{Double.MAX_VALUE, Double.MAX_VALUE};
-        for (MetadataFile file : files) {
+        for (JHipsMetadata file : files) {
             highestScale = computeHighestResolution(highestScale, file);
         }
         return highestScale;
@@ -139,7 +144,7 @@ public class MetadataFileCollection {
      * @param file new scale
      * @return the highest scale
      */
-    private double[] computeHighestResolution(double[] scale, final MetadataFile file) {
+    private double[] computeHighestResolution(double[] scale, final JHipsMetadata file) {
         double scaleX = file.getScale()[0];
         double scaleY = file.getScale()[1];
         scale[0] = (scaleX < scale[0]) ? scaleX : scale[0];
@@ -162,7 +167,7 @@ public class MetadataFileCollection {
         int blue = 0;
         int match = 0;
 
-        for (MetadataFile file : getMetadataFiles()) {
+        for (JHipsMetadata file : getMetadataFiles()) {
             Color c = file.getRGB(longitude, latitude);
             if (c != null) {
                 alpha += c.getAlpha();
@@ -189,7 +194,7 @@ public class MetadataFileCollection {
         int blue = 0;
         int match = 0;
 
-        for (MetadataFile file : getMetadataFiles()) {
+        for (JHipsMetadata file : getMetadataFiles()) {
             if (file.isInside(hpx.getOrder(), pixel)) {
                 Color c = file.getRGB(hpx, pixel);
                 if (c != null) {

@@ -1,25 +1,10 @@
-/**
- * *****************************************************************************
- * Copyright 2015 - Jean-Christophe Malapert (jcmalapert@gmail.com)
- *
- * This file is part of JHIPS.
- *
- * JHIPS is free software: you can redistribute it and/or modify it under the
- * terms of the GNU General Public License as published by the Free Software
- * Foundation, either version 3 of the License, or (at your option) any later
- * version.
- *
- * JHIPS is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * JHIPS. If not, see <http://www.gnu.org/licenses/>.
- * ****************************************************************************
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
  */
-package io.github.malapert.jhips.metadata;
+package io.github.malapert.jhips.provider;
 
-import io.github.malapert.jhips.provider.JHipsMetadataProviderInterface;
 import cds.moc.HealpixMoc;
 import cds.moc.MocCell;
 import healpix.essentials.HealpixBase;
@@ -27,13 +12,14 @@ import healpix.essentials.Pointing;
 import healpix.essentials.RangeSet;
 import healpix.essentials.Scheme;
 import io.github.malapert.jhips.exception.JHIPSException;
+import io.github.malapert.jhips.metadata.MetadataFile;
 import io.github.malapert.jwcs.AbstractJWcs;
 import io.github.malapert.jwcs.WcsNumericalMap;
 import io.github.malapert.jwcs.proj.exception.JWcsException;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -41,36 +27,15 @@ import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 
 /**
- * Stores the image metadata and provides operation on it.
  *
- * <p>
- * The stored image metadata are the following
- * <ul>
- * <li>the image location
- * <li>the buffered image
- * <li>the image coordinates expressed in horizontal frame in radians
- * <li>the camera's FOV according to longitude x latitude in radians
- * <li>the pixel scale in radians/pixel
- * <li>the spatial index of the image
- * <li>the projection type that is associated to the image
- * </ul>
- *
- * <p>
- * The main operations are the following:
- * <ul>
- * <li>gets the color of a pixel at a azimuth/elevation
- * <li>computes automatically the scale in radians/pixel
- * <li>computes if a Healpix pixel intersects with the image spatial index.
- * </ul>
- *
- * @author Jean-Christophe Malapert <jcmalapert@gmail.com>
+ * @author Jean-Christophe Malapert
  */
-public class MetadataFile implements JHipsMetadataProviderInterface {
-
+public abstract class JHipsMetadata implements JHipsMetadataProviderInterface {
+    
     /**
      * Buffered image.
      */
-    private final BufferedImage image;
+    private BufferedImage image;
 
     /**
      * Pixel's scale in rad/pixel.
@@ -93,35 +58,15 @@ public class MetadataFile implements JHipsMetadataProviderInterface {
      */
     private WcsNumericalMap wcs;
 
-    /**
-     * JHips metadata.
-     */
-    private final JHipsMetadataProviderInterface metadata;
-
-    /**
-     * Valid solution in the pixel range in the graphic reference frame.
-     * <p>
-     * [xmin, xmax, ymin, ymax]
-     */
-    private final int[] validatedPixelRange = new int[4];
-
-    /**
-     * Creates an instance to store the file's metadata.
-     *
-     * @param metadata File metadata
-     * @param type projection's type of the image
-     * @throws io.github.malapert.jhips.exception.JHIPSException
-     */
-    public MetadataFile(JHipsMetadataProviderInterface metadata, io.github.malapert.jhips.algorithm.Projection.ProjectionType type) throws JHIPSException {
+    public void init(io.github.malapert.jhips.algorithm.Projection.ProjectionType type) throws JHIPSException {
         try {
-            this.metadata = metadata;
             this.type = type;
-            this.image = ImageIO.read(metadata.getFile());
-            if (metadata.getSubImageSize()[0] == 0 && metadata.getSubImageSize()[1] == 0) {
-                metadata.setSubImageSize(new int[]{this.image.getWidth(), this.image.getHeight()});
+            this.image = ImageIO.read(this.getFile());
+            if (this.getSubImageSize()[0] == 0 && this.getSubImageSize()[1] == 0) {
+                this.setSubImageSize(new int[]{this.image.getWidth(), this.image.getHeight()});
             }
-            this.scale = initPixelScale(metadata.getSubImageSize(), metadata.getFOV());
-            this.index = createIndex(metadata, this.scale);
+            this.scale = initPixelScale(this.getSubImageSize(), this.getFOV());
+            this.index = createIndex(this.scale);
             this.wcs = createWcs();
             try {
                 this.wcs.doInit();
@@ -131,9 +76,16 @@ public class MetadataFile implements JHipsMetadataProviderInterface {
             computeValidatedRangePixel();
         } catch (IOException ex) {
             throw new JHIPSException(ex);
-        }
+        }        
     }
 
+    /**
+     * Valid solution in the pixel range in the graphic reference frame.
+     * <p>
+     * [xmin, xmax, ymin, ymax]
+     */
+    private final int[] validatedPixelRange = new int[4];
+    
     /**
      * Computed validated pixel range.
      * <p>
@@ -165,16 +117,16 @@ public class MetadataFile implements JHipsMetadataProviderInterface {
      * @param pixelScale pixel scale in rad/pixel along X and Y axis
      * @return the spatial index
      */
-    private HealpixMoc createIndex(final JHipsMetadataProviderInterface metadata, double[] pixelScale) {
+    private HealpixMoc createIndex(double[] pixelScale) {
         HealpixMoc moc;
         try {
             moc = new HealpixMoc();
             HealpixBase base = new HealpixBase(1024, Scheme.NESTED);
-            double radius = Math.sqrt(0.5 * metadata.getFOV()[0] * 0.5 * metadata.getFOV()[0] + 0.5 * metadata.getFOV()[1] * 0.5 * metadata.getFOV()[1]);
-            double xFov = 0.5 * metadata.getDetectorSize()[0] - (metadata.getFirstSample()[0] + metadata.getSubImageSize()[0] * 0.5);
-            double yFov = 0.5 * metadata.getDetectorSize()[1] - (metadata.getFirstSample()[1] + metadata.getSubImageSize()[1] * 0.5);
-            double azimuthCenter = metadata.getHorizontalCoordinates()[0] + xFov * pixelScale[0];
-            double elevationCenter = metadata.getHorizontalCoordinates()[1] + yFov * pixelScale[1];
+            double radius = Math.sqrt(0.5 * this.getFOV()[0] * 0.5 * this.getFOV()[0] + 0.5 * this.getFOV()[1] * 0.5 * this.getFOV()[1]);
+            double xFov = 0.5 * this.getDetectorSize()[0] - (this.getFirstSample()[0] + this.getSubImageSize()[0] * 0.5);
+            double yFov = 0.5 * this.getDetectorSize()[1] - (this.getFirstSample()[1] + this.getSubImageSize()[1] * 0.5);
+            double azimuthCenter = this.getHorizontalCoordinates()[0] + xFov * pixelScale[0];
+            double elevationCenter = this.getHorizontalCoordinates()[1] + yFov * pixelScale[1];
 
             RangeSet range = base.queryDiscInclusive(new Pointing(0.5 * Math.PI - elevationCenter, azimuthCenter), radius, 128);
             RangeSet.ValueIterator iter = range.valueIterator();
@@ -219,7 +171,7 @@ public class MetadataFile implements JHipsMetadataProviderInterface {
      * @return the real image request
      */
     public int[] getImageRequest() {
-        return this.metadata.getSubImageSize();
+        return this.getSubImageSize();
     }
 
     /**
@@ -232,22 +184,12 @@ public class MetadataFile implements JHipsMetadataProviderInterface {
     }
 
     /**
-     * Returns the file's location.
-     *
-     * @return the file location
-     */
-    @Override
-    public File getFile() {
-        return this.metadata.getFile();
-    }
-
-    /**
      * Returns the elevation of the detector center in radians.
      *
      * @return the cameraLongitude in radians
      */
     public double getCameraLongitude() {
-        return this.metadata.getHorizontalCoordinates()[0];
+        return this.getHorizontalCoordinates()[0];
     }
 
     /**
@@ -256,7 +198,7 @@ public class MetadataFile implements JHipsMetadataProviderInterface {
      * @return the cameraLatitude in radians
      */
     public double getCameraLatitude() {
-        return this.metadata.getHorizontalCoordinates()[1];
+        return this.getHorizontalCoordinates()[1];
     }
 
     /**
@@ -265,7 +207,7 @@ public class MetadataFile implements JHipsMetadataProviderInterface {
      * @return the cameraFov
      */
     public double[] getCameraFov() {
-        return this.metadata.getFOV();
+        return this.getFOV();
     }
 
     /**
@@ -373,7 +315,7 @@ public class MetadataFile implements JHipsMetadataProviderInterface {
             
             // computes position in the PNG reference frame
             x = (int) (x + 0.5 * (image.getWidth() - getSubImageWidth()));
-            y = (int) (image.getHeight() - (y + 0.5 * (image.getHeight() - getSubImageHeight())));
+            y = (int) (image.getHeight() - 1 - (y + 0.5 * (image.getHeight() - getSubImageHeight())));
 
             // Extracts only the physical measurement - remove the image borders
             if (x >= this.validatedPixelRange[1] || y >= this.validatedPixelRange[3] || x < this.validatedPixelRange[0] || y < this.validatedPixelRange[2]) {
@@ -422,174 +364,105 @@ public class MetadataFile implements JHipsMetadataProviderInterface {
     public boolean isInside(int order, long pixel) {
         return this.index.isIntersecting(order, pixel);
     }
-
-    @Override
-    public double[] getHorizontalCoordinates() {
-        return this.metadata.getHorizontalCoordinates();
-    }
-
-    @Override
-    public double[] getFOV() {
-        return this.metadata.getFOV();
-    }
-
-    @Override
-    public void setSubImageSize(int[] subImage) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public int[] getSubImageSize() {
-        return this.metadata.getSubImageSize();
-    }
-
-    @Override
-    public int[] getFirstSample() {
-        return this.metadata.getFirstSample();
-    }
-
+    
     @Override
     public String getInstrumentID() {
-        return this.metadata.getInstrumentID();
+        return null;
     }
-
+    
     @Override
     public Map<String, double[]> getDistortionCoeff() {
-        return this.metadata.getDistortionCoeff();
-    }
-
-    @Override
-    public double[] getPixelSize() {
-        return this.metadata.getPixelSize();
-    }
-
-    @Override
-    public int[] getDetectorSize() {
-        return this.metadata.getDetectorSize();
-    }
-
-    @Override
-    public String getCreator_did() {
-        return this.metadata.getCreator_did();
-    }
-
-    @Override
-    public String getObs_title() {
-        return this.metadata.getObs_title();
-    }
-
-    @Override
-    public String getDataproduct_type() {
-        return this.metadata.getDataproduct_type();
-    }
-
-    @Override
-    public String getHips_release_date() {
-        return this.metadata.getHips_release_date();
-    }
-
-    @Override
-    public String getHips_status() {
-        return this.metadata.getHips_status();
-    }
-
-    @Override
-    public String getHips_frame() {
-        return this.metadata.getHips_frame();
-    }
+        return null;
+    }    
 
     @Override
     public String getObs_collection() {
-        return this.metadata.getObs_collection();
+        return null;
     }
 
     @Override
     public String getObs_description() {
-        return this.metadata.getObs_description();
+        return null;
     }
 
     @Override
     public String getObs_ack() {
-        return this.metadata.getObs_ack();
+        return null;
     }
 
     @Override
     public String getObs_copyright() {
-        return this.metadata.getObs_copyright();
+        return null;
     }
 
     @Override
     public String getObs_copyright_url() {
-        return this.metadata.getObs_copyright_url();
+        return null;
     }
 
     @Override
     public String getHips_copyright() {
-        return this.metadata.getHips_copyright();
+        return "CNES";
     }
 
     @Override
     public String getHips_creator() {
-        return this.metadata.getHips_creator();
+        return "CNES (Jean-Christophe Malapert)";
     }
 
     @Override
     public String getPublisher_id() {
-        return this.metadata.getPublisher_id();
+        return null;
     }
 
     @Override
     public String getProv_progenitor() {
-        return this.metadata.getProv_progenitor();
+        return null;
     }
 
     @Override
     public String getBib_reference() {
-        return this.metadata.getBib_reference();
+        return null;
     }
 
     @Override
     public String getBib_reference_url() {
-        return this.metadata.getBib_reference_url();
+        return null;
     }
 
     @Override
     public String getObs_regime() {
-        return this.metadata.getObs_regime();
+        return null;
     }
 
     @Override
     public String getData_ucd() {
-        return this.metadata.getData_ucd();
+        return null;
     }
 
     @Override
     public String getHips_pixel_cut() {
-        return this.metadata.getHips_pixel_cut();
-    }
-
-    @Override
-    public String getDataproduct_subtype() {
-        return this.metadata.getDataproduct_subtype();
-    }
-
+        return "0 255";
+    }  
+    
     @Override
     public String getHips_progenitor_url() {
-        return this.metadata.getHips_progenitor_url();
-    }
+        return null;
+    }        
 
     @Override
     public String getVersion() {
-        return this.metadata.getVersion();
-    }
+        return "1.4";
+    }        
 
     @Override
     public String getHips_builder() {
-        return this.metadata.getHips_builder();
+        return "JHIPS with HipsGen";
     }
 
     @Override
     public String getHips_creation_date() {
-        return this.metadata.getHips_creation_date();
-    }
+        return Calendar.getInstance().getTime().toString();
+    }            
+
 }
